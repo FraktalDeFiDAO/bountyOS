@@ -45,61 +45,98 @@ func setupLogging() *log.Logger {
 func scanGitHub(ch chan<- Bounty, logger *log.Logger) {
 	logger.Println("Starting GitHub scan...")
 
-	// We search for issues with 'bounty' label created recently
-	// We also look for 'USDC' or '$' in the title to ensure it's funded
-	query := "is:issue is:open label:bounty sort:created-desc"
-	url := fmt.Sprintf("https://api.github.com/search/issues?q=%s", strings.ReplaceAll(query, " ", "+"))
-
-	req, _ := http.NewRequest("GET", url, nil)
-	if GithubToken != "" {
-		req.Header.Set("Authorization", GithubToken)
+	// Expanded search to include more potential bounties and issues
+	queries := []string{
+		"is:issue is:open label:bounty sort:created-desc",      // Original: issues with 'bounty' label
+		"is:issue is:open label:paid sort:created-desc",        // Issues with 'paid' label
+		"is:issue is:open label:reward sort:created-desc",      // Issues with 'reward' label
+		"is:issue is:open 'bounty' in:title sort:created-desc", // Issues with 'bounty' in title
+		"is:issue is:open 'paid' in:title sort:created-desc",   // Issues with 'paid' in title
+		"is:issue is:open 'reward' in:title sort:created-desc", // Issues with 'reward' in title
+		"is:issue is:open 'contract' in:title sort:created-desc", // Issues with 'contract' in title
+		"is:issue is:open 'freelance' in:title sort:created-desc", // Issues with 'freelance' in title
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.Printf("[GitHub] Error: %v\n", err)
-		return
-	}
-	defer resp.Body.Close()
+	for _, query := range queries {
+		logger.Printf("[GitHub] Searching with query: %s\n", query)
+		url := fmt.Sprintf("https://api.github.com/search/issues?q=%s", strings.ReplaceAll(query, " ", "+"))
 
-	var result struct {
-		Items []struct {
-			Title     string `json:"title"`
-			HTMLURL   string `json:"html_url"`
-			CreatedAt string `json:"created_at"`
-			Body      string `json:"body"`
-		} `json:"items"`
-	}
+		req, _ := http.NewRequest("GET", url, nil)
+		if GithubToken != "" {
+			req.Header.Set("Authorization", GithubToken)
+		}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		logger.Printf("[GitHub] JSON decode error: %v\n", err)
-		return
-	}
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.Printf("[GitHub] Error with query '%s': %v\n", query, err)
+			continue
+		}
+		defer resp.Body.Close()
 
-	logger.Printf("[GitHub] Found %d items\n", len(result.Items))
+		// Check if response is HTML (indicating an error page)
+		contentType := resp.Header.Get("Content-Type")
+		if strings.Contains(contentType, "text/html") {
+			logger.Printf("[GitHub] Received HTML response for query '%s', possibly rate limited\n", query)
+			resp.Body.Close()
+			continue
+		}
 
-	for _, item := range result.Items {
-		// Filter: Only items from the last 24 hours
-		t, _ := time.Parse(time.RFC3339, item.CreatedAt)
-		if time.Since(t) < 24*time.Hour {
-			logger.Printf("[GitHub] Processing item: %s\n", item.Title)
+		var result struct {
+			Items []struct {
+				Title     string `json:"title"`
+				HTMLURL   string `json:"html_url"`
+				CreatedAt string `json:"created_at"`
+				Body      string `json:"body"`
+				Labels    []struct {
+					Name string `json:"name"`
+				} `json:"labels"`
+			} `json:"items"`
+		}
 
-			urgency := "NORMAL"
-			lowerTitle := strings.ToLower(item.Title)
-			if strings.Contains(lowerTitle, "urgent") || strings.Contains(lowerTitle, "fix") {
-				urgency = "HIGH"
-			}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			logger.Printf("[GitHub] JSON decode error for query '%s': %v\n", query, err)
+			continue
+		}
 
-			ch <- Bounty{
-				Source:   "GITHUB",
-				Title:    item.Title,
-				URL:      item.HTMLURL,
-				Reward:   "Unknown (Check Labels)",
-				Platform: "GitHub",
-				Urgency:  urgency,
+		logger.Printf("[GitHub] Query '%s' found %d items\n", query, len(result.Items))
+
+		for _, item := range result.Items {
+			// Filter: Only items from the last 24 hours
+			t, _ := time.Parse(time.RFC3339, item.CreatedAt)
+			if time.Since(t) < 24*time.Hour {
+				logger.Printf("[GitHub] Processing item: %s\n", item.Title)
+
+				urgency := "NORMAL"
+				lowerTitle := strings.ToLower(item.Title)
+				if strings.Contains(lowerTitle, "urgent") || strings.Contains(lowerTitle, "fix") {
+					urgency = "HIGH"
+				}
+
+				// Extract reward info from labels if available
+				rewardInfo := "Unknown"
+				for _, label := range item.Labels {
+					lowerLabel := strings.ToLower(label.Name)
+					if strings.Contains(lowerLabel, "reward") || strings.Contains(lowerLabel, "paid") || strings.Contains(lowerLabel, "bounty") {
+						if rewardInfo == "Unknown" {
+							rewardInfo = label.Name
+						} else {
+							rewardInfo += ", " + label.Name
+						}
+					}
+				}
+
+				ch <- Bounty{
+					Source:   "GITHUB",
+					Title:    item.Title,
+					URL:      item.HTMLURL,
+					Reward:   rewardInfo,
+					Platform: "GitHub",
+					Urgency:  urgency,
+				}
 			}
 		}
+		resp.Body.Close() // Ensure response body is closed before next iteration
 	}
 	logger.Println("Completed GitHub scan")
 }
