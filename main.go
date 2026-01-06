@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -117,6 +119,13 @@ func scanSuperteam(ch chan<- Bounty, logger *log.Logger) {
 	}
 	defer resp.Body.Close()
 
+	// Check if response is HTML (indicating an error page)
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "text/html") {
+		logger.Printf("[Superteam] Received HTML response instead of JSON, possibly rate limited or API changed\n")
+		return
+	}
+
 	// Generic struct to handle their JSON
 	var result struct {
 		Bounties []struct {
@@ -129,10 +138,16 @@ func scanSuperteam(ch chan<- Bounty, logger *log.Logger) {
 		} `json:"bounties"`
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Printf("[Superteam] Error reading response body: %v\n", err)
+		return
+	}
+
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		logger.Printf("[Superteam] JSON unmarshal error: %v\n", err)
+		logger.Printf("[Superteam] Response body: %s\n", string(body))
 		return
 	}
 
@@ -207,6 +222,13 @@ func scanAlgora(ch chan<- Bounty, logger *log.Logger) {
 	}
 	defer resp.Body.Close()
 
+	// Check if response is HTML (indicating an error page)
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "text/html") {
+		logger.Printf("[Algora] Received HTML response instead of JSON, possibly rate limited or API changed\n")
+		return
+	}
+
 	var result struct {
 		Data struct {
 			Bounties struct {
@@ -225,10 +247,16 @@ func scanAlgora(ch chan<- Bounty, logger *log.Logger) {
 		} `json:"data"`
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Printf("[Algora] Error reading response body: %v\n", err)
+		return
+	}
+
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		logger.Printf("[Algora] JSON unmarshal error: %v\n", err)
+		logger.Printf("[Algora] Response body: %s\n", string(body))
 		return
 	}
 
@@ -272,51 +300,68 @@ func main() {
 	fmt.Println("Targeting: GitHub Issues (<24h), Superteam Earn, Algora...")
 	fmt.Println("---------------------------------------------------")
 
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	bountyChan := make(chan Bounty)
 	seen := make(map[string]bool)
 
 	// Start Pollers
 	go func() {
 		for {
-			go scanGitHub(bountyChan, logger)
-			go scanSuperteam(bountyChan, logger)
-			go scanAlgora(bountyChan, logger)
-			time.Sleep(PollInterval)
+			select {
+			case <-sigChan:
+				logger.Println("Shutdown signal received, stopping pollers...")
+				return
+			default:
+				go scanGitHub(bountyChan, logger)
+				go scanSuperteam(bountyChan, logger)
+				go scanAlgora(bountyChan, logger)
+				time.Sleep(PollInterval)
+			}
 		}
 	}()
 
 	// Listen for Hits
-	for b := range bountyChan {
-		if !seen[b.URL] {
-			seen[b.URL] = true
-			logger.Printf("New bounty found: %s - %s\n", b.Source, b.Title)
+	for {
+		select {
+		case b := <-bountyChan:
+			if !seen[b.URL] {
+				seen[b.URL] = true
+				logger.Printf("New bounty found: %s - %s\n", b.Source, b.Title)
 
-			// KEYWORD FILTER: Only show things relevant to Devs
-			keywords := []string{"fix", "bug", "script", "bot", "api", "python", "go", "react", "vue", "integrate", "frontend", "backend", "smart contract", "blockchain"}
-			relevant := false
+				// KEYWORD FILTER: Only show things relevant to Devs
+				keywords := []string{"fix", "bug", "script", "bot", "api", "python", "go", "react", "vue", "integrate", "frontend", "backend", "smart contract", "blockchain"}
+				relevant := false
 
-			titleLower := strings.ToLower(b.Title)
-			for _, k := range keywords {
-				if strings.Contains(titleLower, k) {
-					relevant = true
-					break
-				}
-			}
-
-			if relevant {
-				// Visual Alert
-				color := "\033[36m" // Cyan
-				if b.Urgency == "HIGH" {
-					color = "\033[31m" // Red for Urgent
+				titleLower := strings.ToLower(b.Title)
+				for _, k := range keywords {
+					if strings.Contains(titleLower, k) {
+						relevant = true
+						break
+					}
 				}
 
-				fmt.Printf("%s[%s] %s\033[0m\n", color, b.Source, b.Title)
-				fmt.Printf("   💰 Pay: %s\n", b.Reward)
-				fmt.Printf("   🔗 Link: %s\n", b.URL)
-				fmt.Print("\a") // Audio Beep
+				if relevant {
+					// Visual Alert
+					color := "\033[36m" // Cyan
+					if b.Urgency == "HIGH" {
+						color = "\033[31m" // Red for Urgent
+					}
 
-				logger.Printf("Alerted user to bounty: %s - %s\n", b.Source, b.Title)
+					fmt.Printf("%s[%s] %s\033[0m\n", color, b.Source, b.Title)
+					fmt.Printf("   💰 Pay: %s\n", b.Reward)
+					fmt.Printf("   🔗 Link: %s\n", b.URL)
+					fmt.Print("\a") // Audio Beep
+
+					logger.Printf("Alerted user to bounty: %s - %s\n", b.Source, b.Title)
+				}
 			}
+		case <-sigChan:
+			logger.Println("Shutdown signal received, exiting...")
+			fmt.Println("\n\033[33m[SHUTDOWN] BountyOS Sniper Engine shutting down gracefully...\033[0m")
+			return
 		}
 	}
 }
