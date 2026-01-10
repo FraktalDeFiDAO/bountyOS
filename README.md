@@ -1,132 +1,216 @@
-# BountyOS Sniper Engine
+# BountyOS v8: Obsidian
 
-**Algorithmic bounty hunting system for developers**
-
-BountyOS is a custom-built sniping engine designed to aggregate, filter, and alert you to funded dev tasks before the general public reacts. This tool runs in your terminal, acting as your "Command Center" for finding immediate pay opportunities.
+The most advanced bounty sniping platform for Web3 developers. Automatically scans hundreds of platforms for funded tasks and prioritizes them by payment method and urgency.
 
 ## Features
 
-- **Multi-platform scanning**: Monitors GitHub, Superteam, and Algora for bounties
-- **Real-time filtering**: Only shows developer-relevant opportunities
-- **Smart deduplication**: Prevents duplicate alerts
-- **Keyword-based targeting**: Focuses on "fix", "bug", "script", "api", etc.
-- **Urgency detection**: Highlights urgent/important bounties
-- **Comprehensive logging**: All activity is logged for analysis
-- **Terminal notifications**: Visual and audio alerts for new opportunities
+- **Multi-Platform Scanning**: Monitors GitHub, Superteam, Bountycaster, and more
+- **Intelligent Scoring**: Prioritizes Crypto > Cash App > PayPal > Other payments
+- **Real-time Alerts**: Desktop notifications for high-value opportunities
+- **Persistent Storage**: SQLite database to avoid duplicate alerts
+- **Terminal UI**: Bloomberg-style dashboard for monitoring
+- **Configurable**: YAML configuration for custom settings
 
 ## Architecture
 
-The system targets three specific data streams that hold "Immediate Pay" opportunities:
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Scanners      │    │   Core Logic    │    │   Adapters      │
+│                 │    │                 │    │                 │
+│ • GitHub        │───▶│ • Scoring       │───▶│ • Storage       │
+│ • Superteam     │    │ • Entity        │    │ • Notifications │
+│ • Bountycaster  │    │ • Interfaces    │    │ • UI            │
+│ • Bug Bounties  │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-1. **GitHub Issues**: Filters for issues with `bounty`, `paid`, `reward` labels created in the last 24 hours
-2. **Superteam Earn**: Queries their API for "Sprint" bounties (quick turnaround tasks)
-3. **Algora**: Scans their GraphQL API for open bounties
+## Payment Priority System
 
-**Logic Flow**: `Poller (Go Routines)` -> `Deduplication (Map)` -> `Keyword Filter (Regex)` -> `Alert (Terminal Bell/Print)` -> `You (Manual Execution)`
-
-## Prerequisites
-
-- Go 1.16 or higher
-- Git
-- GitHub Personal Access Token (optional, for avoiding rate limits)
+1. **Crypto King** (Tier 0): USDC, USDT, SOL, ETH, BTC, MATIC, AVAX
+2. **P2P Premium** (Tier 1): Cash App, Venmo
+3. **Fiat Standard** (Tier 2): PayPal, Stripe, Wise
+4. **Low Priority**: Everything else
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bounty-sniper.git
-cd bounty-sniper
+git clone https://github.com/yourusername/bountyos-v8.git
+cd bountyos-v8
 
-# Initialize the module
+# Initialize Go module
 go mod tidy
 
-# Build the executable
-go build -o bounty-sniper
+# Build the application
+go build -o obsidian ./cmd/obsidian
+
+# Run the application
+./obsidian
 ```
+
+## 🔒 Security
+
+BountyOS v8 includes comprehensive security features:
+
+- **Secure HTTP Client**: TLS 1.2+ with strong cipher suites
+- **Token Masking**: Automatic protection of sensitive tokens in logs
+- **Input Validation**: JSON schema validation and XSS protection
+- **Rate Limiting**: GitHub API rate limit tracking and enforcement
+- **Secure Logging**: Sanitized logs with token protection
+
+**Security Documentation**: See [SECURITY.md](SECURITY.md) for detailed security information.
+
+### Security Configuration
+
+```bash
+# Set GitHub token securely
+export GITHUB_TOKEN="your_github_personal_access_token"
+
+# Enable debug mode (shows more detailed logs)
+export DEBUG=true
+
+# Run with security features
+./obsidian
+```
+
+**Best Practices**:
+- Use tokens with minimal required permissions
+- Rotate tokens every 90 days
+- Monitor logs regularly for suspicious activity
+- Keep dependencies updated
 
 ## Configuration
 
-Edit the constants in `main.go` to customize the behavior:
+The app loads `config/config.yaml` by default. You can point to a different file with `-config` and override any key via environment variables.
+By default logs are written to `./data/bountyos.log`, and when the TUI is enabled the console is kept clean.
 
-```go
-const (
-    PollInterval = 60 * time.Second  // How often to poll for new bounties
-    GithubToken = ""                 // Add your GitHub token if you hit rate limits
-)
+Example `.env` overrides:
+
+```bash
+GITHUB_TOKEN=your_github_personal_access_token
+DISCORD_WEBHOOK_URL=your_discord_webhook
+POLL_INTERVAL_SECONDS=60
+MIN_SCORE=60
+BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP=1
+LOG_PATH=./data/bountyos.log
+LOG_TO_STDOUT=false
+LOG_TO_STDERR=false
+QUIET_UI_LOGS=true
+VALIDATE_LINKS_HTTP=true
+LINK_VALIDATION_TIMEOUT_SECONDS=5
 ```
 
 ## Usage
 
-Run the sniper engine:
+The application will start a terminal UI that displays bounties in real-time, sorted by priority score. High-priority bounties trigger desktop notifications.
+
+## Web Frontend (Vue + WS)
+
+The Go server serves the built frontend from `WEB_STATIC_DIR` (default `./web/dist`) and streams new bounties over WebSocket at `/ws`.
+
+Dev (Podman Compose):
 
 ```bash
-go run main.go
+podman compose -f docker-compose.dev.yml up --build
 ```
 
-Or use the built binary:
+This brings up:
+- Go API/WebSocket on `http://localhost:12496`
+- Vite dev server on `http://localhost:13440`
+
+Build for production:
 
 ```bash
-./bounty-sniper
+cd web
+npm run build
 ```
 
-## Standard Operating Procedure (SOP)
+### Keyboard Controls
+- `Ctrl+C`: Exit the application
 
-When the tool beeps, you have roughly 15 minutes to secure the bag:
+## Supported Platforms
 
-### 1. The Assessment (2 Minutes)
-- Click the link
-- **Check Comments**: If there are >3 comments saying "I'm working on this," **ABORT**. It's gone.
-- **Check Funding**: Does the issuer have a history?
+### Category I: Flash Layer (Hours to 48h)
+- Algora (GitHub bounties)
+- Polar.sh (GitHub bounties)
+- Opire (GitHub bounties)
+- GitPay (GitHub bounties)
+- Superteam Earn (Solana)
+- Bountycaster (Farcaster)
+- IssueHunt (GitHub bounties)
 
-### 2. The Claim (The "Snipe")
-Do not ask "Can I work on this?" **Claim it.**
+### Category II: Big Game Hunters (Bug Bounties & Audits)
+- Immunefi
+- HackenProof
+- Code4rena
+- Sherlock
+- Hats Finance
+- Bugcrowd
+- HackerOne
+- Intigriti
 
-- **GitHub Comment**: *"I am starting this now. I have experience with [Language]. I will have a PR ready in [Time]."*
-- **Superteam**: Join their Discord immediately. Find the specific project channel. Ping the founder: *"Saw the bounty for X. I'm on it. Check my GitHub [Link]."*
+### Category III: Automated Layer (DePIN & Compute)
+- Bittensor
+- Akash Network
+- Render Network
+- Golem
+- Mysterium
+- Sentinel
 
-### 3. The Work (The "Sprint")
-- If it's a bug fix: Fork, Fix, PR.
-- If it's a script: Write it, upload to a private Gist, send a video demo. **Never send the code until payment is in escrow or confirmed.**
+### Category IV: Freelance Aggregators
+- LaborX
+- Hyve
+- CryptoTask
+- Bondex
+- WorkX
+- Freelancer
 
-## Git Workflow
+## Scam Filter
 
-This project follows a structured git workflow:
+The system automatically filters out potential scams based on:
+- No upfront payment requests
+- Verified platform sources
+- Established payment methods
+
+## Development
+
+### Adding New Scanners
+
+To add a new data source, implement the `core.Scanner` interface:
+
+```go
+type Scanner interface {
+    Name() string
+    Scan(ctx context.Context) (<-chan core.Bounty, error)
+}
+```
+
+### Custom Scoring
+
+The scoring algorithm in `internal/core/score.go` can be customized to prioritize different factors.
+
+### Test Speed
+
+To speed up tests that hit mocked HTTP endpoints, you can disable rate limiter sleeps:
 
 ```bash
-# Create a feature branch for enhancements
-git checkout -b feature/new-data-source
-
-# Make your changes
-# ... edit files ...
-
-# Commit with conventional commit message
-git add .
-git commit -m "feat: add Algora GraphQL API integration"
-
-# Push to remote
-git push origin feature/new-data-source
-
-# Create pull request
+BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP=1 go test ./...
 ```
 
-## Logging
+## Containers (Podman Compose)
 
-All activity is logged to `bounty_sniper.log` with timestamps and source information for analysis and debugging.
+The default container workflow is Podman Compose:
 
-## Contributing
+```bash
+podman compose -f docker-compose.yml up --build
+```
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Commit your changes (`git commit -m 'Add some amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+If you prefer Docker, the same file works with:
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
 
 ## License
 
 MIT License - See LICENSE file for details.
-
-## Disclaimer
-
-This tool is designed for educational purposes and ethical bounty hunting. Always follow the terms of service of the platforms you interact with, and conduct yourself professionally when claiming bounties.

@@ -9,9 +9,14 @@ bounty-sniper
 # Logs
 *.log
 bounty_sniper.log
+data/bountyos.log
 
 # Dependencies
 vendor/
+node_modules/
+web/node_modules/
+web/dist/
+go/pkg/mod/
 
 # IDE
 .vscode/
@@ -22,3 +27,4 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+audit-reports/
