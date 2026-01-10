@@ -12,6 +12,7 @@ logs
 *.log
 bounty_sniper.log
 data/bountyos.log
+audit-reports/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
