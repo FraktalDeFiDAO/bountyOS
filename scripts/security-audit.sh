@@ -30,6 +30,7 @@ $RUNTIME run --rm \
     -v "$PWD:/project:ro" \
     -v "$PWD/audit-reports:/reports:rw" \
     docker.io/aquasec/trivy:latest fs /project \
+    --skip-dirs workspace \
     --scanners vuln,secret,misconfig \
     --format json \
     --output "/reports/trivy_report_$TIMESTAMP.json"
@@ -44,7 +45,7 @@ if [ -f "go.mod" ]; then
         -v "$PWD:/project:ro" \
         -v "$PWD/audit-reports:/reports:rw" \
         -w /project \
-        docker.io/securego/gosec:latest -fmt=json -out="/reports/gosec_report_$TIMESTAMP.json" ./...
+        docker.io/securego/gosec:latest -exclude-dir=workspace -fmt=json -out="/reports/gosec_report_$TIMESTAMP.json" ./...
     echo "Gosec scan complete. Report: $REPORT_DIR/gosec_report_$TIMESTAMP.json"
 fi
 
@@ -70,9 +71,19 @@ if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ] || [ -f "Pipfile" ] || [
         -v "$PWD:/project:ro" \
         -v "$PWD/audit-reports:/reports:rw" \
         -w /project \
-        docker.io/secfigo/bandit:latest -r . -f json -o /reports/bandit_report_$TIMESTAMP.json || true
+        docker.io/secfigo/bandit:latest -x workspace -r . -f json -o /reports/bandit_report_$TIMESTAMP.json || true
     echo "Bandit scan complete. Report: $REPORT_DIR/bandit_report_$TIMESTAMP.json"
 fi
+
+# 5. Checkov (Infrastructure as Code Scan)
+echo "------------------------------------------------"
+echo "Running Checkov (IaC Scan)..."
+$RUNTIME run --rm \
+    -v "$PWD:/project:ro" \
+    -v "$PWD/audit-reports:/reports:rw" \
+    -w /project \
+    docker.io/bridgecrew/checkov:latest --skip-path workspace -d . --output json --soft-fail > "audit-reports/checkov_report_$TIMESTAMP.json" || true
+echo "Checkov scan complete. Report: $REPORT_DIR/checkov_report_$TIMESTAMP.json"
 
 echo "------------------------------------------------"
 echo "Full Security Audit Complete."
