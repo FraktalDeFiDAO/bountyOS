@@ -17,6 +17,7 @@ node_modules/
 web/node_modules/
 web/dist/
 go/pkg/mod/
+workspace/
 
 # IDE
 .vscode/
@@ -27,4 +28,6 @@ go/pkg/mod/
 # OS
 .DS_Store
 Thumbs.db
+audit-reports/
+audit-reports/
 audit-reports/

@@ -35,8 +35,8 @@ The most advanced bounty sniping platform for Web3 developers. Automatically sca
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bountyos-v8.git
-cd bountyos-v8
+git clone https://github.com/FraktalDeFiDAO/bountyOS.git
+cd bountyOS
 
 # Initialize Go module
 go mod tidy
