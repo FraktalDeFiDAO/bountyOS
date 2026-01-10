@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  obsidian:
+    build: .
+    container_name: bountyos-obsidian
+    restart: unless-stopped
+    environment:
+      - HEADLESS=true
+      - NO_UI=true
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - WEB_PORT=12496
+      - WEB_STATIC_DIR=/app/web/dist
+      - LOG_TO_STDOUT=true
+      - LOG_TO_STDERR=false
+      - QUIET_UI_LOGS=true
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "12496:12496"
+    tty: true  # Enable TTY for TUI components if needed (though we are headless/logging mostly)

@@ -1,0 +1,17 @@
+{
+  "name": "bounty-sniper",
+  "version": "1.0.0",
+  "description": "The most advanced bounty sniping platform for Web3 developers. Automatically scans hundreds of platforms for funded tasks and prioritizes them by payment method and urgency.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.3"
+  }
+}

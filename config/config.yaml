@@ -1,0 +1,136 @@
+# BountyOS v8: Obsidian Configuration
+
+# API Tokens
+GITHUB_TOKEN: "" # Personal Access Token for GitHub API (optional but recommended)
+DISCORD_WEBHOOK_URL: "" # Discord webhook for alerts (optional)
+
+# Polling Configuration
+POLL_INTERVAL_SECONDS: 60
+
+# Storage
+STORAGE_PATH: "./data/bounties.db"
+
+# Logging
+LOG_PATH: "./data/bountyos.log"
+LOG_TO_STDOUT: true
+LOG_TO_STDERR: false
+QUIET_UI_LOGS: true
+VALIDATE_LINKS_HTTP: true
+LINK_VALIDATION_TIMEOUT_SECONDS: 5
+
+# UI Configuration
+WEB_STATIC_DIR: "./web/dist"
+WEB_PORT: 12496
+NO_UI: false
+UI_REFRESH_SECONDS: 5
+TUI_RECENT_LIMIT: 15
+API_BOUNTIES_LIMIT: 50
+API_STATS_LIMIT: 100
+WEB_FETCH_INTERVAL_SECONDS: 5
+
+# Scoring Thresholds
+MIN_SCORE: 60
+HIGH_PRIORITY_SCORE: 80
+MEDIUM_PRIORITY_SCORE: 50
+LOW_PRIORITY_SCORE: 30
+
+# Payment Preferences (Priority Order)
+PAYMENT_PREFERENCES:
+  - "USDC" # Tier 0: King Crypto
+  - "SOL" # Tier 0: King Crypto
+  - "ETH" # Tier 0: King Crypto
+  - "CASHAPP" # Tier 1: P2P Fiat
+  - "VENMO" # Tier 1: P2P Fiat
+  - "PAYPAL" # Tier 2: Legacy Fiat
+  - "STRIPE" # Tier 2: Legacy Fiat
+  - "WISE" # Tier 2: Legacy Fiat
+
+# Payment Tiers (used for scoring + priority)
+CRYPTO_CURRENCIES:
+  - "USDC"
+  - "USDT"
+  - "SOL"
+  - "ETH"
+  - "BTC"
+  - "MATIC"
+  - "AVAX"
+  - "ARB"
+  - "OP"
+
+P2P_METHODS:
+  - "CASHAPP"
+  - "CASH APP"
+  - "VENMO"
+
+FIAT_METHODS:
+  - "USD"
+  - "PAYPAL"
+  - "STRIPE"
+  - "WISE"
+
+# Platforms to Monitor
+ENABLED_SCANNERS:
+  - "GITHUB_AGGREGATOR"
+  - "SUPERTEAM"
+  - "BOUNTYCASTER"
+  # - "BUG_BOUNTIES"
+
+# Scanner Configuration
+GITHUB_BASE_URL: "https://api.github.com"
+GITHUB_LABELS:
+  - "algora-bounty"
+  - "polar"
+  - "opire"
+  - "gitpay"
+  - "issuehunt"
+  - "bounty"
+  - "funded"
+GITHUB_PER_PAGE: 100
+GITHUB_MAX_PAGES: 10
+
+SUPERTEAM_BASE_URL: "https://earn.superteam.fun/api/bounties"
+SUPERTEAM_STATUSES:
+  - "active"
+  - "funded"
+
+BOUNTYCASTER_BASE_URL: "https://bountycaster.xyz/api/bounties"
+BOUNTYCASTER_STATUSES:
+  - "active"
+  - "funded"
+
+# Keywords for Urgency Detection
+URGENCY_KEYWORDS:
+  - "URGENT"
+  - "ASAP"
+  - "CRITICAL"
+  - "IMMEDIATE"
+  - "EMERGENCY"
+
+# Development Task Keywords
+DEV_TASK_KEYWORDS:
+  - "FIX"
+  - "BUG"
+  - "API"
+  - "INTEGRATION"
+  - "SMART CONTRACT"
+  - "BLOCKCHAIN"
+
+# Automation Task Keywords
+AUTOMATION_KEYWORDS:
+  - "SCRIPT"
+  - "BOT"
+
+# Security Task Keywords
+SECURITY_KEYWORDS:
+  - "SECURITY"
+  - "VULNERABILITY"
+  - "PENTEST"
+  - "HACK"
+  - "EXPLOIT"
+
+# Audit Task Keywords
+AUDIT_KEYWORDS:
+  - "AUDIT"
+
+# Test/Dev Options
+BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP: false

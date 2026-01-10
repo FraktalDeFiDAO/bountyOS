@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  obsidian:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: bountyos-obsidian-dev
+    environment:
+      - HEADLESS=true
+      - NO_UI=true
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - WEB_PORT=12496
+      - LOG_TO_STDOUT=true
+      - LOG_TO_STDERR=false
+      - QUIET_UI_LOGS=true
+      - VALIDATE_LINKS_HTTP=true
+      - LINK_VALIDATION_TIMEOUT_SECONDS=5
+      - WEB_STATIC_DIR=/app/web/dist
+    volumes:
+      - ./:/app
+      - go_mod_cache:/go/pkg/mod
+      - ./data:/app/data
+    ports:
+      - "12496:12496"
+
+  web:
+    image: node:20-alpine
+    container_name: bountyos-web-dev
+    working_dir: /app/web
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 13440"
+    environment:
+      - VITE_API_TARGET=http://obsidian:12496
+      - VITE_WS_TARGET=ws://obsidian:12496
+    volumes:
+      - ./web:/app/web
+      - web_node_modules:/app/web/node_modules
+    ports:
+      - "13440:13440"
+    depends_on:
+      - obsidian
+
+volumes:
+  go_mod_cache:
+  web_node_modules:
