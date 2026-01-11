@@ -48,22 +48,33 @@ func SecureHTTPClient() *http.Client {
 				return dialer.DialContext(ctx, network, address)
 			}
 
-			ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
-			if err != nil || len(ips) == 0 {
-				return dialer.DialContext(ctx, network, address)
-			}
-
-			ipv4s := make([]net.IP, 0, len(ips))
-			ipv6s := make([]net.IP, 0, len(ips))
-			for _, ip := range ips {
-				if ip.To4() != nil {
-					ipv4s = append(ipv4s, ip)
-				} else {
-					ipv6s = append(ipv6s, ip)
+			ipv4s := []net.IP{}
+			ipv6s := []net.IP{}
+			if preferIPv4 {
+				if ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", host); err == nil {
+					ipv4s = append(ipv4s, ips...)
+				}
+				if len(ipv4s) == 0 {
+					if ips, err := net.DefaultResolver.LookupIP(ctx, "ip6", host); err == nil {
+						ipv6s = append(ipv6s, ips...)
+					}
+				}
+			} else {
+				if ips, err := net.DefaultResolver.LookupIP(ctx, "ip6", host); err == nil {
+					ipv6s = append(ipv6s, ips...)
+				}
+				if len(ipv6s) == 0 {
+					if ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", host); err == nil {
+						ipv4s = append(ipv4s, ips...)
+					}
 				}
 			}
 
-			candidates := make([]net.IP, 0, len(ips))
+			if len(ipv4s) == 0 && len(ipv6s) == 0 {
+				return dialer.DialContext(ctx, network, address)
+			}
+
+			candidates := make([]net.IP, 0, len(ipv4s)+len(ipv6s))
 			if preferIPv4 {
 				candidates = append(candidates, ipv4s...)
 				candidates = append(candidates, ipv6s...)
