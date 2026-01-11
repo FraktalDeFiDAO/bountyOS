@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: bountyos-obsidian-dev
+    network_mode: host
     environment:
       - HEADLESS=true
       - NO_UI=true
@@ -18,32 +19,23 @@ services:
       - VALIDATE_LINKS_HTTP=false
       - LINK_VALIDATION_TIMEOUT_SECONDS=5
       - WEB_STATIC_DIR=/app/web/dist
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
     volumes:
       - ./:/app
       - go_mod_cache:/go/pkg/mod
       - ./data:/app/data
-    ports:
-      - "12496:12496"
 
   web:
     image: node:20-alpine
     container_name: bountyos-web-dev
+    network_mode: host
     working_dir: /app/web
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 13440"
     environment:
-      - VITE_API_TARGET=http://obsidian:12496
-      - VITE_WS_TARGET=ws://obsidian:12496
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
+      - VITE_API_TARGET=http://localhost:12496
+      - VITE_WS_TARGET=ws://localhost:12496
     volumes:
       - ./web:/app/web
       - web_node_modules:/app/web/node_modules
-    ports:
-      - "13440:13440"
     depends_on:
       - obsidian
 
