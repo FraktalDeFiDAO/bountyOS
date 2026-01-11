@@ -42,14 +42,14 @@ func TestDoRequestWithRetry(t *testing.T) {
 
 		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
-		
+
 		// Force short backoff for test
-		// Since we can't easily change the constant in the package, we just accept the delay 
+		// Since we can't easily change the constant in the package, we just accept the delay
 		// or ideally we would have made the backoff configurable.
 		// For now, we'll just run it. It will wait 1s + 2s = 3s.
 		// To speed it up, we could use a shorter timeout context, but that might cancel it.
 		// A better way is to make baseBackoff a variable.
-		
+
 		_, err := doRequestWithRetry(ctx, client, req)
 		if err != nil {
 			t.Errorf("Expected success, got error: %v", err)
@@ -71,13 +71,13 @@ func TestDoRequestWithRetry(t *testing.T) {
 
 		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
-		
+
 		_, err := doRequestWithRetry(ctx, client, req)
 		if err == nil {
 			t.Error("Expected error, got success")
 		}
 	})
-	
+
 	// 3. Test 5xx error retry
 	t.Run("RetryOn500", func(t *testing.T) {
 		attempts := 0
@@ -95,7 +95,7 @@ func TestDoRequestWithRetry(t *testing.T) {
 
 		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
-		
+
 		resp, err := doRequestWithRetry(ctx, client, req)
 		if err != nil {
 			t.Errorf("Expected success, got error: %v", err)

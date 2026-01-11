@@ -43,7 +43,7 @@ func doRequestWithRetry(ctx context.Context, client *http.Client, req *http.Requ
 			}
 			return resp, nil
 		}
-		
+
 		lastErr = err
 	}
 

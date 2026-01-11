@@ -68,18 +68,18 @@ func MaskToken(token string) string {
 	if token == "" {
 		return ""
 	}
-	
+
 	// If token is short, mask completely
 	if len(token) <= 4 {
 		return "****"
 	}
-	
+
 	// Show first 2 and last 2 characters, mask the rest
 	maskedLength := len(token) - 4
 	if maskedLength <= 0 {
 		return "****"
 	}
-	
+
 	return token[:2] + strings.Repeat("*", maskedLength) + token[len(token)-2:]
 }
 

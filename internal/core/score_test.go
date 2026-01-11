@@ -109,23 +109,23 @@ func TestGetPaymentPriority(t *testing.T) {
 		expected PaymentPriority
 	}{
 		{
-			name: "USDC is CryptoKing",
-			bounty: Bounty{Currency: "USDC", PaymentType: "crypto"},
+			name:     "USDC is CryptoKing",
+			bounty:   Bounty{Currency: "USDC", PaymentType: "crypto"},
 			expected: CryptoKing,
 		},
 		{
-			name: "CashApp is P2PPremium",
-			bounty: Bounty{Currency: "CASHAPP", PaymentType: "p2p"},
+			name:     "CashApp is P2PPremium",
+			bounty:   Bounty{Currency: "CASHAPP", PaymentType: "p2p"},
 			expected: P2PPremium,
 		},
 		{
-			name: "PayPal is FiatStandard",
-			bounty: Bounty{Currency: "PAYPAL", PaymentType: "fiat"},
+			name:     "PayPal is FiatStandard",
+			bounty:   Bounty{Currency: "PAYPAL", PaymentType: "fiat"},
 			expected: FiatStandard,
 		},
 		{
-			name: "Unknown is LowPriority",
-			bounty: Bounty{Currency: "ROCKS", PaymentType: "barter"},
+			name:     "Unknown is LowPriority",
+			bounty:   Bounty{Currency: "ROCKS", PaymentType: "barter"},
 			expected: LowPriority,
 		},
 	}
