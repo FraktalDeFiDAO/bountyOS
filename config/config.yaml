@@ -88,10 +88,9 @@ GITHUB_LABELS:
 GITHUB_PER_PAGE: 100
 GITHUB_MAX_PAGES: 10
 
-SUPERTEAM_BASE_URL: "https://earn.superteam.fun/api/bounties"
+SUPERTEAM_BASE_URL: "https://earn.superteam.fun/api/listings"
 SUPERTEAM_STATUSES:
-  - "active"
-  - "funded"
+  - "open"
 
 BOUNTYCASTER_BASE_URL: "https://www.bountycaster.xyz/api/v1/bounties"
 BOUNTYCASTER_STATUSES:

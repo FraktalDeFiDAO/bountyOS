@@ -40,11 +40,17 @@ func ValidateGitHubResponse(data []byte) (*GitHubAPIResponse, error) {
 		return nil, fmt.Errorf("invalid JSON format: %w", err)
 	}
 
-	// Validate each item
-	for i, item := range response.Items {
-		if err := validateGitHubIssue(item); err != nil {
-			return nil, fmt.Errorf("invalid item at index %d: %w", i, err)
+	// Validate each item; drop invalid items but keep the response.
+	if len(response.Items) > 0 {
+		validItems := make([]GitHubIssue, 0, len(response.Items))
+		for i, item := range response.Items {
+			if err := validateGitHubIssue(item); err != nil {
+				GetLogger().Warn("Skipping invalid GitHub issue at index %d: %v", i, err)
+				continue
+			}
+			validItems = append(validItems, item)
 		}
+		response.Items = validItems
 	}
 
 	return &response, nil

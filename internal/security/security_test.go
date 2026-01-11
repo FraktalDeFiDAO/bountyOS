@@ -178,8 +178,11 @@ func TestGitHubResponseValidation(t *testing.T) {
 			}
 		]
 	}`
-	_, err = ValidateGitHubResponse([]byte(xssData))
-	if err == nil {
-		t.Errorf("Expected validation to fail for XSS content")
+	resp, err = ValidateGitHubResponse([]byte(xssData))
+	if err != nil {
+		t.Fatalf("Validation should not fail on XSS content: %v", err)
+	}
+	if len(resp.Items) != 0 {
+		t.Errorf("Expected invalid XSS items to be dropped, got %d items", len(resp.Items))
 	}
 }
