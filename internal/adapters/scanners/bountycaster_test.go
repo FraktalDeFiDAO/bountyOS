@@ -13,36 +13,40 @@ import (
 
 func TestBountycasterScanner_ScanStatuses(t *testing.T) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	activeResponse := fmt.Sprintf(`{
+	openResponse := fmt.Sprintf(`{
 		"bounties": [{
-			"id":"bc-active",
-			"title":"Active Cast",
-			"body":"active",
-			"amount":150,
-			"token":"USDC",
-			"cast_hash":"0xactive",
-			"created_at":"%s"
+			"uid":"bc-open",
+			"title":"Open Bounty",
+			"summary_text":"open",
+			"created_at":"%s",
+			"expiration_date":"%s",
+			"tag_slugs":["tag-open"],
+			"links":{"resource":"/bounty/0xopen","external":"https://farcaster.xyz/~/conversations/0xopen"},
+			"reward_summary":{"unit_amount":"150","symbol":"USDC"},
+			"platform":{"type":"farcaster","hash":"0xopen"}
 		}]
-	}`, now)
-	fundedResponse := fmt.Sprintf(`{
+	}`, now, now)
+	inProgressResponse := fmt.Sprintf(`{
 		"bounties": [{
-			"id":"bc-funded",
-			"title":"Funded Cast",
-			"body":"funded",
-			"amount":300,
-			"token":"USDC",
-			"cast_hash":"0xfunded",
-			"created_at":"%s"
+			"uid":"bc-inprogress",
+			"title":"In Progress Bounty",
+			"summary_text":"in-progress",
+			"created_at":"%s",
+			"expiration_date":"%s",
+			"tag_slugs":["tag-in-progress"],
+			"links":{"resource":"/bounty/0xinprogress","external":"https://farcaster.xyz/~/conversations/0xinprogress"},
+			"reward_summary":{"unit_amount":"300","symbol":"USDC"},
+			"platform":{"type":"farcaster","hash":"0xinprogress"}
 		}]
-	}`, now)
+	}`, now, now)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/bounties/active":
-			fmt.Fprint(w, activeResponse)
-		case "/api/bounties/funded":
-			fmt.Fprint(w, fundedResponse)
+		case "/api/v1/bounties/open":
+			fmt.Fprint(w, openResponse)
+		case "/api/v1/bounties/in-progress":
+			fmt.Fprint(w, inProgressResponse)
 		default:
 			http.NotFound(w, r)
 		}
@@ -50,8 +54,8 @@ func TestBountycasterScanner_ScanStatuses(t *testing.T) {
 	defer ts.Close()
 
 	scanner := NewBountycasterScanner(BountycasterScannerConfig{})
-	scanner.baseURL = ts.URL + "/api/bounties"
-	scanner.statuses = []string{"active", "funded"}
+	scanner.baseURL = ts.URL + "/api/v1/bounties"
+	scanner.statuses = []string{"open", "in-progress"}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -72,13 +76,13 @@ func TestBountycasterScanner_ScanStatuses(t *testing.T) {
 
 	for _, b := range bounties {
 		switch b.Title {
-		case "Active Cast":
-			if !hasTag(b.Tags, "active") {
-				t.Errorf("Expected active tag in %v", b.Tags)
+		case "Open Bounty":
+			if !hasTag(b.Tags, "open") {
+				t.Errorf("Expected open tag in %v", b.Tags)
 			}
-		case "Funded Cast":
-			if !hasTag(b.Tags, "funded") {
-				t.Errorf("Expected funded tag in %v", b.Tags)
+		case "In Progress Bounty":
+			if !hasTag(b.Tags, "in-progress") {
+				t.Errorf("Expected in-progress tag in %v", b.Tags)
 			}
 		default:
 			t.Fatalf("Unexpected bounty title: %s", b.Title)

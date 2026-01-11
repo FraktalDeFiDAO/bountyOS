@@ -93,10 +93,9 @@ SUPERTEAM_STATUSES:
   - "active"
   - "funded"
 
-BOUNTYCASTER_BASE_URL: "https://bountycaster.xyz/api/bounties"
+BOUNTYCASTER_BASE_URL: "https://www.bountycaster.xyz/api/v1/bounties"
 BOUNTYCASTER_STATUSES:
-  - "active"
-  - "funded"
+  - "open"
 
 # Keywords for Urgency Detection
 URGENCY_KEYWORDS:

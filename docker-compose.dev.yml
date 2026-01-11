@@ -15,7 +15,7 @@ services:
       - LOG_TO_STDOUT=true
       - LOG_TO_STDERR=false
       - QUIET_UI_LOGS=true
-      - VALIDATE_LINKS_HTTP=true
+      - VALIDATE_LINKS_HTTP=false
       - LINK_VALIDATION_TIMEOUT_SECONDS=5
       - WEB_STATIC_DIR=/app/web/dist
     volumes:

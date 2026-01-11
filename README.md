@@ -59,6 +59,8 @@ BountyOS v8 includes comprehensive security features:
 - **Secure Logging**: Sanitized logs with token protection
 
 **Security Documentation**: See [SECURITY.md](SECURITY.md) for detailed security information.
+**GitHub Bounties Ops Guide**: See [docs/github-bounties.md](docs/github-bounties.md) for the end-to-end GitHub bounty process and troubleshooting.
+**GitHub Bounties Runbook**: See [docs/runbook-github-bounties.md](docs/runbook-github-bounties.md) for the short ops runbook.
 
 ### Security Configuration
 
@@ -78,6 +80,18 @@ export DEBUG=true
 - Rotate tokens every 90 days
 - Monitor logs regularly for suspicious activity
 - Keep dependencies updated
+
+## Documentation
+
+- `SECURITY.md` — Security design and operational guidance
+- `docs/github-bounties.md` — Full GitHub bounty pipeline and edge cases
+- `docs/runbook-github-bounties.md` — Short ops runbook and decision tree
+
+## Donations
+
+- **ETH (mainnet + ERC-20, sidechains, L2s):** `0xB5a6102b711ADd687b12758e1C72686c434A0e90`
+- **BTC:** `bc1qzhe846kmvp8ncyq09yrme4659espealac4hpff`
+- **Solana:** `E97N31qNdwUz1jsgccnJJ9Eqkhhe13rhEmtREHrPLwzz`
 
 ## Configuration
 
@@ -195,6 +209,14 @@ To speed up tests that hit mocked HTTP endpoints, you can disable rate limiter s
 
 ```bash
 BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP=1 go test ./...
+```
+
+### Formatting (goimports)
+
+Run Go import formatting inside the Podman dev container:
+
+```bash
+./scripts/format-go.sh
 ```
 
 ## Containers (Podman Compose)
