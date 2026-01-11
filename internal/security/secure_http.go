@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"log"
@@ -29,12 +30,62 @@ func SecureHTTPClient() *http.Client {
 	tlsConfig.RootCAs = caCertPool
 
 	// Create custom transport with security settings
+	preferIPv4 := true
+	if strings.EqualFold(os.Getenv("BOUNTYOS_PREFER_IPV4"), "false") {
+		preferIPv4 = false
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   15 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   15 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(address)
+			if err != nil {
+				return dialer.DialContext(ctx, network, address)
+			}
+
+			ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+			if err != nil || len(ips) == 0 {
+				return dialer.DialContext(ctx, network, address)
+			}
+
+			ipv4s := make([]net.IP, 0, len(ips))
+			ipv6s := make([]net.IP, 0, len(ips))
+			for _, ip := range ips {
+				if ip.To4() != nil {
+					ipv4s = append(ipv4s, ip)
+				} else {
+					ipv6s = append(ipv6s, ip)
+				}
+			}
+
+			candidates := make([]net.IP, 0, len(ips))
+			if preferIPv4 {
+				candidates = append(candidates, ipv4s...)
+				candidates = append(candidates, ipv6s...)
+			} else {
+				candidates = append(candidates, ipv6s...)
+				candidates = append(candidates, ipv4s...)
+			}
+
+			var lastErr error
+			for _, ip := range candidates {
+				conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+				if err == nil {
+					return conn, nil
+				}
+				lastErr = err
+			}
+			if lastErr != nil {
+				return nil, lastErr
+			}
+
+			return dialer.DialContext(ctx, network, address)
+		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
