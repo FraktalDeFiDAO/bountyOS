@@ -26,6 +26,11 @@ pids
 *.seed
 *.pid.lock
 
+# Local data (SQLite, logs)
+data/*.db*
+data/*.sqlite*
+data/*.log
+
 # Coverage
 coverage
 *.lcov
