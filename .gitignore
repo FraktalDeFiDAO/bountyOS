@@ -26,10 +26,20 @@ pids
 *.seed
 *.pid.lock
 
-# Local data (SQLite, logs)
+# Local data (SQLite, logs, generated exports)
 data/*.db*
 data/*.sqlite*
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.sqlite-journal
 data/*.log
+data/*.json
+data/*.jsonl
+data/*.csv
+data/*.tsv
 
 # Coverage
 coverage
