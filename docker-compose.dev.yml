@@ -18,6 +18,9 @@ services:
       - VALIDATE_LINKS_HTTP=false
       - LINK_VALIDATION_TIMEOUT_SECONDS=5
       - WEB_STATIC_DIR=/app/web/dist
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./:/app
       - go_mod_cache:/go/pkg/mod
@@ -33,6 +36,9 @@ services:
     environment:
       - VITE_API_TARGET=http://obsidian:12496
       - VITE_WS_TARGET=ws://obsidian:12496
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./web:/app/web
       - web_node_modules:/app/web/node_modules
