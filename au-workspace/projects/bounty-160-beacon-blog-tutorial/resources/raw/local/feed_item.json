@@ -1,0 +1,16 @@
+{
+  "id": "",
+  "title": "Write a tutorial or blog about Beacon (50 RTC Bounty)",
+  "platform": "GITHUB/BOUNTY",
+  "reward": "Funded",
+  "currency": "USDC/ETH/SOL",
+  "url": "https://github.com/Scottcjn/rustchain-bounties/issues/160",
+  "created_at": "2026-02-13T21:05:10Z",
+  "score": 60,
+  "description": "## Bounty: 50 RTC  Write a tutorial or blog post about using Beacon — the AI agent heartbeat and coordination protocol. Publish it where developers will find it.  ### Requirements  1. **Write a tutorial or blog post** about Beacon 2.6 2. Must be published on at least one platform:    - Dev.to    - Medium    - Hashnode    - Personal blog (with RSS or discoverable URL)    - Moltbook (m/ai, m/elyanlabs, or m/rustchain) 3. **Content requirements**:    - Explain what Beacon is and why it matters for AI agents    - Include **working code examples** (Python or JavaScript/TypeScript)    - At least one of: heartbeat tutorial, mayday tutorial, contracts tutorial, or Atlas walkthrough    - Minimum 500 words (quality over quantity) 4. **Code examples must actually work** — reader should be able to copy-paste and run them 5. Link back to the beacon-skill GitHub repo  ### Bonus Points  - Cover multiple Beacon features (heartbeat + contracts, etc.) - Include diagrams or architecture illustrations...",
+  "tags": [
+    "active"
+  ],
+  "expires_at": null,
+  "payment_type": "crypto"
+}

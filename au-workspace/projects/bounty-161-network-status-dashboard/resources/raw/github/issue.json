@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161",
+  "repository_url": "https://api.github.com/repos/Scottcjn/Rustchain",
+  "labels_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161/labels{/name}",
+  "comments_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161/comments",
+  "events_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161/events",
+  "html_url": "https://github.com/Scottcjn/Rustchain/issues/161",
+  "id": 3938951569,
+  "node_id": "I_kwDOOdNtbc7qx6GR",
+  "number": 161,
+  "title": "[BOUNTY] RustChain Network Status Page — Public Health Dashboard (25 RTC)",
+  "user": {
+    "login": "Scottcjn",
+    "id": 121303252,
+    "node_id": "U_kgDOBzrw1A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/121303252?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Scottcjn",
+    "html_url": "https://github.com/Scottcjn",
+    "followers_url": "https://api.github.com/users/Scottcjn/followers",
+    "following_url": "https://api.github.com/users/Scottcjn/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Scottcjn/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Scottcjn/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Scottcjn/subscriptions",
+    "organizations_url": "https://api.github.com/users/Scottcjn/orgs",
+    "repos_url": "https://api.github.com/users/Scottcjn/repos",
+    "events_url": "https://api.github.com/users/Scottcjn/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Scottcjn/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 8491289527,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Ltw",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/help%20wanted",
+      "name": "help wanted",
+      "color": "008672",
+      "default": true,
+      "description": "Extra attention is needed"
+    },
+    {
+      "id": 8491289534,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Lvg",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/good%20first%20issue",
+      "name": "good first issue",
+      "color": "7057ff",
+      "default": true,
+      "description": "Good for newcomers"
+    },
+    {
+      "id": 10159650136,
+      "node_id": "LA_kwDOOdNtbc8AAAACXY_1WA",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/bounty",
+      "name": "bounty",
+      "color": "0E8A16",
+      "default": false,
+      "description": "RTC bounty reward"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignee": null,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-02-13T20:06:14Z",
+  "updated_at": "2026-02-13T20:06:14Z",
+  "closed_at": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Network Status Page — 25 RTC Bounty\n\nBuild a simple public status page showing the health of all RustChain nodes. Like status.io or upptime but for our network.\n\n### What It Shows\n\nFor each of the 3 nodes:\n- **Status indicator** (green/yellow/red)\n- **Uptime %** (last 24h, 7d, 30d)\n- **Response time** (ms)\n- **Current epoch**\n- **Active miners count**\n- **Last block time**\n\n**Nodes:**\n\\`\\`\\`\nNode 1 (Primary):    https://50.28.86.131/health\nNode 2 (Ergo Anchor): https://50.28.86.153/health\nNode 3 (External):   http://76.8.228.245:8099/health\n\\`\\`\\`\n\n### Health API Response\n\n\\`\\`\\`json\n{\n  \"ok\": true,\n  \"version\": \"2.2.1-rip200\",\n  \"uptime_s\": 86400,\n  \"db_rw\": true,\n  \"tip_age_slots\": 0\n}\n\\`\\`\\`\n\n### Implementation\n\n- Single HTML page (GitHub Pages hostable)\n- Polls all 3 nodes every 60 seconds\n- Shows historical uptime (store in localStorage or simple backend)\n- Green = healthy, Yellow = slow (>2s), Red = down\n- Mobile-friendly layout\n\n### Payout\n\n| Deliverable | RTC |\n|-------------|-----|\n| Working status page polling all 3 nodes with indicators | 15 |\n| Historical uptime tracking + response time graph | 10 |\n\nGood first issue — straightforward API polling with a clean UI.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/161/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

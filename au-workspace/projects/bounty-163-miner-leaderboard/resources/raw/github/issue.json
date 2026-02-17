@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163",
+  "repository_url": "https://api.github.com/repos/Scottcjn/Rustchain",
+  "labels_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163/labels{/name}",
+  "comments_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163/comments",
+  "events_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163/events",
+  "html_url": "https://github.com/Scottcjn/Rustchain/issues/163",
+  "id": 3938954873,
+  "node_id": "I_kwDOOdNtbc7qx655",
+  "number": 163,
+  "title": "[BOUNTY] Miner Leaderboard — Top Earners & Hardware Showcase (20 RTC)",
+  "user": {
+    "login": "Scottcjn",
+    "id": 121303252,
+    "node_id": "U_kgDOBzrw1A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/121303252?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Scottcjn",
+    "html_url": "https://github.com/Scottcjn",
+    "followers_url": "https://api.github.com/users/Scottcjn/followers",
+    "following_url": "https://api.github.com/users/Scottcjn/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Scottcjn/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Scottcjn/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Scottcjn/subscriptions",
+    "organizations_url": "https://api.github.com/users/Scottcjn/orgs",
+    "repos_url": "https://api.github.com/users/Scottcjn/repos",
+    "events_url": "https://api.github.com/users/Scottcjn/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Scottcjn/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 8491289527,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Ltw",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/help%20wanted",
+      "name": "help wanted",
+      "color": "008672",
+      "default": true,
+      "description": "Extra attention is needed"
+    },
+    {
+      "id": 8491289534,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Lvg",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/good%20first%20issue",
+      "name": "good first issue",
+      "color": "7057ff",
+      "default": true,
+      "description": "Good for newcomers"
+    },
+    {
+      "id": 10159650136,
+      "node_id": "LA_kwDOOdNtbc8AAAACXY_1WA",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/bounty",
+      "name": "bounty",
+      "color": "0E8A16",
+      "default": false,
+      "description": "RTC bounty reward"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignee": null,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-02-13T20:07:01Z",
+  "updated_at": "2026-02-14T06:06:52Z",
+  "closed_at": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Miner Leaderboard — 20 RTC Bounty\n\nBuild a live leaderboard showing the top RTC earners and the most interesting hardware on the network. Gamification drives engagement.\n\n### What It Shows\n\n**Leaderboard Table:**\n| Rank | Miner | Hardware | Multiplier | Epochs Active | Est. Earnings |\n|------|-------|----------|-----------|---------------|---------------|\n| 1 | eafc6f... | PowerPC G4 | 2.5x | 1,200 | ~340 RTC |\n| 2 | g5-selena | PowerPC G5 | 2.0x | 1,100 | ~270 RTC |\n| ... | | | | | |\n\n**Stats Cards:**\n- Total miners (currently 12)\n- Total RTC distributed\n- Most exotic hardware on the network\n- Newest miner to join\n- Network hash diversity (how many unique architectures)\n\n### Data Source\n\n\\`\\`\\`bash\n# Active miners with hardware info\ncurl -sk https://50.28.86.131/api/miners\n\n# Current epoch\ncurl -sk https://50.28.86.131/epoch\n\n# Sample miner data:\n# {\"miner\": \"eafc6f14...\", \"device_arch\": \"G4\", \"device_family\": \"PowerPC\", \n#  \"antiquity_multiplier\": 2.5, \"last_attest\": 1771013121}\n\\`\\`\\`\n\n### Implementation\n\n- Single HTML page (GitHub Pages hostable)\n- Auto-refreshes from live API\n- Sort by: multiplier, epochs active, estimated earnings\n- Hardware icons or badges (vintage = gold, modern = silver)\n\n### Payout\n\n| Deliverable | RTC |\n|-------------|-----|\n| Working leaderboard with live data + sorting | 12 |\n| Stats cards + hardware badges + clean design | 8 |\n\n### Why This Matters\n\nLeaderboards create competition. When a miner sees someone earning more with a G4, they go dig out their old PowerBook. Social proof + gamification = more miners.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/163/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

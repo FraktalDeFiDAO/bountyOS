@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160",
+  "repository_url": "https://api.github.com/repos/Scottcjn/rustchain-bounties",
+  "labels_url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160/labels{/name}",
+  "comments_url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160/comments",
+  "events_url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160/events",
+  "html_url": "https://github.com/Scottcjn/rustchain-bounties/issues/160",
+  "id": 3939215619,
+  "node_id": "I_kwDORGgqa87qy6kD",
+  "number": 160,
+  "title": "Write a tutorial or blog about Beacon (50 RTC Bounty)",
+  "user": {
+    "login": "Scottcjn",
+    "id": 121303252,
+    "node_id": "U_kgDOBzrw1A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/121303252?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Scottcjn",
+    "html_url": "https://github.com/Scottcjn",
+    "followers_url": "https://api.github.com/users/Scottcjn/followers",
+    "following_url": "https://api.github.com/users/Scottcjn/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Scottcjn/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Scottcjn/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Scottcjn/subscriptions",
+    "organizations_url": "https://api.github.com/users/Scottcjn/orgs",
+    "repos_url": "https://api.github.com/users/Scottcjn/repos",
+    "events_url": "https://api.github.com/users/Scottcjn/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Scottcjn/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 10115029412,
+      "node_id": "LA_kwDORGgqa88AAAACWucZpA",
+      "url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/labels/documentation",
+      "name": "documentation",
+      "color": "0075ca",
+      "default": true,
+      "description": "Improvements or additions to documentation"
+    },
+    {
+      "id": 10115035859,
+      "node_id": "LA_kwDORGgqa88AAAACWucy0w",
+      "url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/labels/bounty",
+      "name": "bounty",
+      "color": "0E8A16",
+      "default": false,
+      "description": "RTC-paid bounty"
+    },
+    {
+      "id": 10153071106,
+      "node_id": "LA_kwDORGgqa88AAAACXSuSAg",
+      "url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/labels/community",
+      "name": "community",
+      "color": "5319E7",
+      "default": false,
+      "description": "Community engagement"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignee": null,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 10,
+  "created_at": "2026-02-13T21:05:10Z",
+  "updated_at": "2026-02-14T20:15:59Z",
+  "closed_at": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Bounty: 50 RTC\n\nWrite a tutorial or blog post about using Beacon — the AI agent heartbeat and coordination protocol. Publish it where developers will find it.\n\n### Requirements\n\n1. **Write a tutorial or blog post** about Beacon 2.6\n2. Must be published on at least one platform:\n   - Dev.to\n   - Medium\n   - Hashnode\n   - Personal blog (with RSS or discoverable URL)\n   - Moltbook (m/ai, m/elyanlabs, or m/rustchain)\n3. **Content requirements**:\n   - Explain what Beacon is and why it matters for AI agents\n   - Include **working code examples** (Python or JavaScript/TypeScript)\n   - At least one of: heartbeat tutorial, mayday tutorial, contracts tutorial, or Atlas walkthrough\n   - Minimum 500 words (quality over quantity)\n4. **Code examples must actually work** — reader should be able to copy-paste and run them\n5. Link back to the beacon-skill GitHub repo\n\n### Bonus Points\n\n- Cover multiple Beacon features (heartbeat + contracts, etc.)\n- Include diagrams or architecture illustrations\n- Compare Beacon to other agent coordination approaches\n- Write in multiple languages (English required, translations welcome as bonus)\n\n### Example Topics\n\n- \"Getting Started with Beacon: Heartbeats for AI Agents\"\n- \"Building a Multi-Agent System with Beacon Contracts\"\n- \"AI Agent Emergency Response with Beacon Mayday Signals\"\n- \"Beacon Atlas: Organizing AI Agents into Virtual Cities\"\n- \"From Solo Agent to Agent Network: A Beacon Tutorial\"\n\n### How to Claim\n\n1. Comment on this issue expressing interest\n2. Write and publish your tutorial/blog\n3. Submit proof: link to published article\n4. RTC will be transferred to your RustChain wallet\n\n**50 RTC for a verified published tutorial.** Multiple claims possible for substantially different articles.\n\n### Resources\n\n- [beacon-skill on GitHub](https://github.com/Scottcjn/beacon-skill)\n- [beacon-skill on PyPI](https://pypi.org/project/beacon-skill/)\n- [beacon-skill on npm](https://www.npmjs.com/package/beacon-skill)\n- [ClawHub](https://clawhub.ai/packages/beacon-skill)\n- [RustChain Network](https://50.28.86.131/explorer)",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/Scottcjn/rustchain-bounties/issues/160/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162",
+  "repository_url": "https://api.github.com/repos/Scottcjn/Rustchain",
+  "labels_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162/labels{/name}",
+  "comments_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162/comments",
+  "events_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162/events",
+  "html_url": "https://github.com/Scottcjn/Rustchain/issues/162",
+  "id": 3938952636,
+  "node_id": "I_kwDOOdNtbc7qx6W8",
+  "number": 162,
+  "title": "[BOUNTY] wRTC Price Ticker Bot — Discord/Telegram Price Alerts (20 RTC)",
+  "user": {
+    "login": "Scottcjn",
+    "id": 121303252,
+    "node_id": "U_kgDOBzrw1A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/121303252?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Scottcjn",
+    "html_url": "https://github.com/Scottcjn",
+    "followers_url": "https://api.github.com/users/Scottcjn/followers",
+    "following_url": "https://api.github.com/users/Scottcjn/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Scottcjn/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Scottcjn/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Scottcjn/subscriptions",
+    "organizations_url": "https://api.github.com/users/Scottcjn/orgs",
+    "repos_url": "https://api.github.com/users/Scottcjn/repos",
+    "events_url": "https://api.github.com/users/Scottcjn/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Scottcjn/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 8491289527,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Ltw",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/help%20wanted",
+      "name": "help wanted",
+      "color": "008672",
+      "default": true,
+      "description": "Extra attention is needed"
+    },
+    {
+      "id": 8491289534,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Lvg",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/good%20first%20issue",
+      "name": "good first issue",
+      "color": "7057ff",
+      "default": true,
+      "description": "Good for newcomers"
+    },
+    {
+      "id": 10159650136,
+      "node_id": "LA_kwDOOdNtbc8AAAACXY_1WA",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/bounty",
+      "name": "bounty",
+      "color": "0E8A16",
+      "default": false,
+      "description": "RTC bounty reward"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignee": null,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-02-13T20:06:29Z",
+  "updated_at": "2026-02-13T20:06:29Z",
+  "closed_at": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## wRTC Price Ticker Bot — 20 RTC Bounty\n\nBuild a simple bot that posts the current wRTC/SOL price from Raydium to Discord or Telegram. New token = people want to check the price constantly.\n\n### Price Data Source\n\nwRTC trades on Raydium (Solana DEX). Get price data from:\n\n\\`\\`\\`bash\n# Raydium pool info (pool ID: 8CF2Q8nSCxRacDShbtF86XTSrYjueBMKmfdR3MLdnYzb)\n# Use Birdeye, DexScreener, or Jupiter API for price\n\n# DexScreener API (free, no key):\ncurl -s \"https://api.dexscreener.com/latest/dex/tokens/12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X\"\n\n# Jupiter price API (free):\ncurl -s \"https://api.jup.ag/price/v2?ids=12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X\"\n\\`\\`\\`\n\n### What The Bot Does\n\n- Posts price update on command (\\`/price\\` or \\`!price\\`)\n- Shows: price in SOL, price in USD, 24h change %, liquidity\n- Optional: auto-post every hour to a #price channel\n- Optional: alert when price moves >10% in 1 hour\n\n### Implementation\n\nPick one (or both for extra credit):\n- **Discord bot** using discord.py\n- **Telegram bot** using python-telegram-bot\n\n### Payout\n\n| Deliverable | RTC |\n|-------------|-----|\n| Working bot with \\`/price\\` command showing live wRTC price | 12 |\n| Auto-posting + price alerts + clean formatting | 8 |\n\n### Token Details\n\n- **Mint:** \\`12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X\\`\n- **Supply:** 8,300,000 wRTC\n- **Decimals:** 6\n- **Raydium Pool:** \\`8CF2Q8nSCxRacDShbtF86XTSrYjueBMKmfdR3MLdnYzb\\`\n- **Swap:** https://raydium.io/swap/?inputMint=sol&outputMint=12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/162/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

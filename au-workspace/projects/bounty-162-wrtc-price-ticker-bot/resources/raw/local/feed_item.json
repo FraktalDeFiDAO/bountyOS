@@ -1,0 +1,17 @@
+{
+  "id": "",
+  "title": "[BOUNTY] wRTC Price Ticker Bot — Discord/Telegram Price Alerts (20 RTC)",
+  "platform": "GITHUB/BOUNTY",
+  "reward": "Funded",
+  "currency": "USDC/ETH/SOL",
+  "url": "https://github.com/Scottcjn/Rustchain/issues/162",
+  "created_at": "2026-02-13T20:06:29Z",
+  "score": 80,
+  "description": "## wRTC Price Ticker Bot — 20 RTC Bounty  Build a simple bot that posts the current wRTC/SOL price from Raydium to Discord or Telegram. New token = people want to check the price constantly.  ### Price Data Source  wRTC trades on Raydium (Solana DEX). Get price data from:  \\`\\`\\`bash # Raydium pool info (pool ID: 8CF2Q8nSCxRacDShbtF86XTSrYjueBMKmfdR3MLdnYzb) # Use Birdeye, DexScreener, or Jupiter API for price  # DexScreener API (free, no key): curl -s \"https://api.dexscreener.com/latest/dex/tokens/12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X\"  # Jupiter price API (free): curl -s \"https://api.jup.ag/price/v2?ids=12TAdKXxcGf6oCv4rqDz2NkgxjyHq6HQKoxKZYGf5i4X\" \\`\\`\\`  ### What The Bot Does  - Posts price update on command (\\`/price\\` or \\`!price\\`) - Shows: price in SOL, price in USD, 24h change %, liquidity - Optional: auto-post every hour to a #price channel - Optional: alert when price moves >10% in 1 hour  ### Implementation  Pick one (or both for extra credit): - **Discord bot** us...",
+  "tags": [
+    "active",
+    "automation"
+  ],
+  "expires_at": null,
+  "payment_type": "crypto"
+}

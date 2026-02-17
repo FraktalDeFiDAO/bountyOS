@@ -1,0 +1,16 @@
+{
+  "id": "",
+  "title": "[BOUNTY] RustChain Network Status Page — Public Health Dashboard (25 RTC)",
+  "platform": "GITHUB/BOUNTY",
+  "reward": "Funded",
+  "currency": "USD",
+  "url": "https://github.com/Scottcjn/Rustchain/issues/161",
+  "created_at": "2026-02-13T20:06:14Z",
+  "score": 35,
+  "description": "## Network Status Page — 25 RTC Bounty  Build a simple public status page showing the health of all RustChain nodes. Like status.io or upptime but for our network.  ### What It Shows  For each of the 3 nodes: - **Status indicator** (green/yellow/red) - **Uptime %** (last 24h, 7d, 30d) - **Response time** (ms) - **Current epoch** - **Active miners count** - **Last block time**  **Nodes:** \\`\\`\\` Node 1 (Primary):    https://50.28.86.131/health Node 2 (Ergo Anchor): https://50.28.86.153/health Node 3 (External):   http://76.8.228.245:8099/health \\`\\`\\`  ### Health API Response  \\`\\`\\`json {   \"ok\": true,   \"version\": \"2.2.1-rip200\",   \"uptime_s\": 86400,   \"db_rw\": true,   \"tip_age_slots\": 0 } \\`\\`\\`  ### Implementation  - Single HTML page (GitHub Pages hostable) - Polls all 3 nodes every 60 seconds - Shows historical uptime (store in localStorage or simple backend) - Green = healthy, Yellow = slow (>2s), Red = down - Mobile-friendly layout  ### Payout  | Deliverable | RTC | |----------...",
+  "tags": [
+    "active"
+  ],
+  "expires_at": null,
+  "payment_type": "fiat"
+}

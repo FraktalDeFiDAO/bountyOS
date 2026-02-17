@@ -1,0 +1,95 @@
+{
+  "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159",
+  "repository_url": "https://api.github.com/repos/Scottcjn/Rustchain",
+  "labels_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159/labels{/name}",
+  "comments_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159/comments",
+  "events_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159/events",
+  "html_url": "https://github.com/Scottcjn/Rustchain/issues/159",
+  "id": 3938950015,
+  "node_id": "I_kwDOOdNtbc7qx5t_",
+  "number": 159,
+  "title": "[BOUNTY] RTC Wallet Distribution Tracker — Live Balance Dashboard (40 RTC)",
+  "user": {
+    "login": "Scottcjn",
+    "id": 121303252,
+    "node_id": "U_kgDOBzrw1A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/121303252?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Scottcjn",
+    "html_url": "https://github.com/Scottcjn",
+    "followers_url": "https://api.github.com/users/Scottcjn/followers",
+    "following_url": "https://api.github.com/users/Scottcjn/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Scottcjn/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Scottcjn/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Scottcjn/subscriptions",
+    "organizations_url": "https://api.github.com/users/Scottcjn/orgs",
+    "repos_url": "https://api.github.com/users/Scottcjn/repos",
+    "events_url": "https://api.github.com/users/Scottcjn/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Scottcjn/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 8491289527,
+      "node_id": "LA_kwDOOdNtbc8AAAAB-h7Ltw",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/help%20wanted",
+      "name": "help wanted",
+      "color": "008672",
+      "default": true,
+      "description": "Extra attention is needed"
+    },
+    {
+      "id": 10159650136,
+      "node_id": "LA_kwDOOdNtbc8AAAACXY_1WA",
+      "url": "https://api.github.com/repos/Scottcjn/Rustchain/labels/bounty",
+      "name": "bounty",
+      "color": "0E8A16",
+      "default": false,
+      "description": "RTC bounty reward"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignee": null,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-02-13T20:05:52Z",
+  "updated_at": "2026-02-13T20:05:52Z",
+  "closed_at": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## RTC Distribution Tracker — 40 RTC Bounty\n\nBuild a web page or script that visualizes RTC token distribution across all wallets. Think Etherscan's \"token holders\" page but for RustChain.\n\n### What It Shows\n\n- **Total wallets** with non-zero balances\n- **Top holders** table (wallet ID, balance, % of supply)\n- **Distribution chart** (pie or bar — how concentrated is RTC?)\n- **Whale alerts** — flag any wallet holding >1% of supply (83,000+ RTC)\n- **Gini coefficient** or similar inequality metric\n- **Auto-refresh** every 5 minutes\n\n### Data Source\n\nThe RustChain node exposes balance data. Query the live API:\n\n\\`\\`\\`bash\n# Get all balances (admin endpoint)\ncurl -sk https://50.28.86.131/api/miners\n\n# Individual balance check\ncurl -sk \"https://50.28.86.131/balance?miner_id=WALLET_ID\"\n\n# Known founder wallets for labeling:\n# founder_community — Community fund\n# founder_dev_fund — Development fund\n# founder_team_bounty — Team & bounties\n# founder_founders — Founders pool\n\\`\\`\\`\n\n**Total supply: 8,300,000 RTC** (fixed, no inflation)\n\n### Implementation Options (pick one)\n\n**Option A: Static HTML page** (simplest)\n- Single HTML file with embedded JS\n- Fetches from API, renders charts with Chart.js or similar\n- Can be hosted on GitHub Pages\n\n**Option B: Python script + output**\n- CLI tool that queries API and prints formatted table\n- Optional: generates HTML report\n- \\`pip install\\` friendly\n\n**Option C: Live dashboard**\n- Simple Flask/FastAPI app\n- Auto-refreshing page\n- Historical tracking over time\n\n### Payout\n\n| Deliverable | RTC |\n|-------------|-----|\n| Working tracker showing all wallets + balances + % of supply | 20 |\n| Distribution chart + whale alerts + Gini coefficient | 10 |\n| Clean UI/output, labeled founder wallets, auto-refresh | 10 |\n\n### Submission\n\n1. Comment below that you're working on it\n2. Submit PR with the tracker tool\n3. Include screenshot showing it working with live data",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/Scottcjn/Rustchain/issues/159/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

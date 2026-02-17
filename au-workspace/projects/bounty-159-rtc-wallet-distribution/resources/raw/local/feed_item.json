@@ -1,0 +1,16 @@
+{
+  "id": "",
+  "title": "[BOUNTY] RTC Wallet Distribution Tracker — Live Balance Dashboard (40 RTC)",
+  "platform": "GITHUB/BOUNTY",
+  "reward": "Funded",
+  "currency": "USDC/ETH/SOL",
+  "url": "https://github.com/Scottcjn/Rustchain/issues/159",
+  "created_at": "2026-02-13T20:05:52Z",
+  "score": 60,
+  "description": "## RTC Distribution Tracker — 40 RTC Bounty  Build a web page or script that visualizes RTC token distribution across all wallets. Think Etherscan's \"token holders\" page but for RustChain.  ### What It Shows  - **Total wallets** with non-zero balances - **Top holders** table (wallet ID, balance, % of supply) - **Distribution chart** (pie or bar — how concentrated is RTC?) - **Whale alerts** — flag any wallet holding >1% of supply (83,000+ RTC) - **Gini coefficient** or similar inequality metric - **Auto-refresh** every 5 minutes  ### Data Source  The RustChain node exposes balance data. Query the live API:  \\`\\`\\`bash # Get all balances (admin endpoint) curl -sk https://50.28.86.131/api/miners  # Individual balance check curl -sk \"https://50.28.86.131/balance?miner_id=WALLET_ID\"  # Known founder wallets for labeling: # founder_community — Community fund # founder_dev_fund — Development fund # founder_team_bounty — Team & bounties # founder_founders — Founders pool \\`\\`\\` ...",
+  "tags": [
+    "active"
+  ],
+  "expires_at": null,
+  "payment_type": "crypto"
+}

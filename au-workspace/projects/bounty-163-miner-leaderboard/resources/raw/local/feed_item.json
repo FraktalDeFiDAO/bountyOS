@@ -1,0 +1,16 @@
+{
+  "id": "",
+  "title": "[BOUNTY] Miner Leaderboard — Top Earners & Hardware Showcase (20 RTC)",
+  "platform": "GITHUB/BOUNTY",
+  "reward": "Funded",
+  "currency": "USD",
+  "url": "https://github.com/Scottcjn/Rustchain/issues/163",
+  "created_at": "2026-02-13T20:07:01Z",
+  "score": 35,
+  "description": "## Miner Leaderboard — 20 RTC Bounty  Build a live leaderboard showing the top RTC earners and the most interesting hardware on the network. Gamification drives engagement.  ### What It Shows  **Leaderboard Table:** | Rank | Miner | Hardware | Multiplier | Epochs Active | Est. Earnings | |------|-------|----------|-----------|---------------|---------------| | 1 | eafc6f... | PowerPC G4 | 2.5x | 1,200 | ~340 RTC | | 2 | g5-selena | PowerPC G5 | 2.0x | 1,100 | ~270 RTC | | ... | | | | | |  **Stats Cards:** - Total miners (currently 12) - Total RTC distributed - Most exotic hardware on the network - Newest miner to join - Network hash diversity (how many unique architectures)  ### Data Source  \\`\\`\\`bash # Active miners with hardware info curl -sk https://50.28.86.131/api/miners  # Current epoch curl -sk https://50.28.86.131/epoch  # Sample miner data: # {\"miner\": \"eafc6f14...\", \"device_arch\": \"G4\", \"device_family\": \"PowerPC\",  #  \"antiquity_multiplier\": 2.5, \"last_attest\": 1771013121}...",
+  "tags": [
+    "active"
+  ],
+  "expires_at": null,
+  "payment_type": "fiat"
+}

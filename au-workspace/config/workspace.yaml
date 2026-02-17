@@ -1,0 +1,11 @@
+name: au-workspace
+version: 2
+registry: config/projects.tsv
+tracker: config/bounties.tsv
+projects_root: projects
+conventions:
+  project_slug_pattern: "<domain>-<issue>-<short-name>"
+  resources_raw: "projects/<slug>/resources/raw"
+  generated_output: "projects/<slug>/output"
+  bounty_statuses: "backlog,ready,in_progress,blocked,review,submitted,paid,done,dropped"
+  bounty_priorities: "low,medium,high,critical"
