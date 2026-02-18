@@ -26,6 +26,8 @@ import (
 
 var logger *security.SecureLogger
 
+const shutdownTimeout = 30 * time.Second
+
 func main() {
 	configPath := flag.String("config", config.DefaultPath, "Path to config file")
 	noUI := flag.Bool("no-ui", false, "Disable terminal UI")
@@ -36,7 +38,6 @@ func main() {
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		// Logger not initialized yet; fall back to stderr.
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
@@ -44,7 +45,6 @@ func main() {
 	headless := strings.EqualFold(os.Getenv("HEADLESS"), "true")
 	disableUI := cfg.NoUI || *noUI || headless
 
-	// Initialize secure logger
 	logger = security.GetLogger()
 	logFile := openLogFile(cfg.LogPath)
 	logWriters := []io.Writer{}
@@ -99,15 +99,17 @@ func main() {
 	logger.RegisterToken(githubToken)
 	logger.Info("Starting BountyOS v8: Obsidian with enhanced security")
 
-	// Initialize components
-	storage, err := storage.NewSQLiteStorage(cfg.StoragePath)
+	storageInst, err := storage.NewSQLiteStorage(cfg.StoragePath)
 	if err != nil {
 		logger.Error("Failed to initialize storage: %v", err)
 		os.Exit(1)
 	}
-	defer storage.Close()
 
-	pruned, err := storage.PurgeInvalidURLs(ctx, cfg.ValidateLinksHTTP, time.Duration(cfg.LinkValidationTimeout)*time.Second)
+	if err := storageInst.Ping(ctx); err != nil {
+		logger.Warn("Initial database health check failed: %v", err)
+	}
+
+	pruned, err := storageInst.PurgeInvalidURLs(ctx, cfg.ValidateLinksHTTP, time.Duration(cfg.LinkValidationTimeout)*time.Second)
 	if err != nil {
 		logger.Warn("Failed to purge invalid URLs: %v", err)
 	} else if pruned > 0 {
@@ -121,14 +123,11 @@ func main() {
 		logger.Info("Discord notifications enabled")
 	}
 
-	// Initialize and start Web UI
-	webUI := ui.NewWebUI(storage, cfg.WebPort, cfg.APIBountiesLimit, cfg.APIStatsLimit, cfg.WebFetchIntervalSeconds, cfg.WebStaticDir)
+	webUI := ui.NewWebUI(storageInst, cfg.WebPort, cfg.APIBountiesLimit, cfg.APIStatsLimit, cfg.WebFetchIntervalSeconds, cfg.WebStaticDir)
 	if err := webUI.Start(ctx); err != nil {
 		logger.Error("Failed to start Web UI: %v", err)
 	}
-	defer webUI.Stop()
 
-	// Initialize scanners
 	enabled := make(map[string]bool)
 	for _, name := range cfg.EnabledScanners {
 		enabled[strings.ToUpper(strings.TrimSpace(name))] = true
@@ -178,108 +177,161 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Channel for bounties
 	bountyChan := make(chan core.Bounty, 100)
+	var bountyWg sync.WaitGroup
 
-	// Start signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start scanning loop
+	scanCtx, scanCancel := context.WithCancel(ctx)
+	defer scanCancel()
+
+	processCtx, processCancel := context.WithCancel(ctx)
+	defer processCancel()
+
 	go func() {
-		// Initial scan
-		scanAll(ctx, scannersList, bountyChan)
+		scanAll(scanCtx, scannersList, bountyChan)
 
 		ticker := time.NewTicker(time.Duration(cfg.PollIntervalSeconds) * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
-			case <-ctx.Done():
+			case <-scanCtx.Done():
 				return
 			case <-ticker.C:
-				scanAll(ctx, scannersList, bountyChan)
+				scanAll(scanCtx, scannersList, bountyChan)
 			}
 		}
 	}()
 
-	// Process bounties
 	minScore := cfg.MinScore
 
+	bountyWg.Add(1)
 	go func() {
-		for bounty := range bountyChan {
-			bounty.URL = security.NormalizeURL(bounty.URL)
-			if bounty.URL == "" || !security.ValidateURL(bounty.URL) {
-				logger.Warn("Skipping bounty with invalid URL: %s", bounty.URL)
-				continue
-			}
-
-			if cfg.ValidateLinksHTTP {
-				timeout := time.Duration(cfg.LinkValidationTimeout) * time.Second
-				checkCtx, cancel := context.WithTimeout(ctx, timeout)
-				ok := security.ValidateURLReachable(checkCtx, bounty.URL, timeout)
-				cancel()
+		defer bountyWg.Done()
+		for {
+			select {
+			case bounty, ok := <-bountyChan:
 				if !ok {
-					logger.Warn("Skipping bounty with unreachable URL: %s", bounty.URL)
-					continue
+					return
 				}
-			}
-
-			bounty.Title = security.SanitizeString(bounty.Title)
-			bounty.Platform = security.SanitizeString(bounty.Platform)
-			bounty.Reward = security.SanitizeString(bounty.Reward)
-			bounty.Currency = security.SanitizeString(bounty.Currency)
-			bounty.Description = security.SanitizeString(bounty.Description)
-
-			isNew, err := storage.IsNew(bounty.URL)
-			if err != nil {
-				logger.Error("Error checking if bounty is new: %v", err)
-				continue
-			}
-
-			if !isNew {
-				continue
-			}
-
-			// Calculate score
-			bounty.Score = core.CalculateUrgency(&bounty)
-
-			// Save to storage
-			if err := storage.Save(bounty); err != nil {
-				logger.Error("Error saving bounty: %v", err)
-				continue
-			}
-			webUI.Broadcast(bounty)
-
-			// Send notification if score is high enough
-			if bounty.Score >= minScore {
-				if err := notifier.Alert(bounty); err != nil {
-					logger.Error("Error sending desktop notification: %v", err)
+				processBounty(processCtx, bounty, storageInst, webUI, notifier, discordNotifier, discordWebhook, cfg, minScore)
+			case <-processCtx.Done():
+				for bounty := range bountyChan {
+					processBounty(context.Background(), bounty, storageInst, webUI, notifier, discordNotifier, discordWebhook, cfg, minScore)
 				}
-				if discordWebhook != "" {
-					if err := discordNotifier.Alert(bounty); err != nil {
-						logger.Error("Error sending Discord notification: %v", err)
-					}
-				}
+				return
 			}
 		}
 	}()
 
-	// Display UI if not disabled
 	var uiWG sync.WaitGroup
 	if !disableUI {
 		uiWG.Add(1)
 		go func() {
 			defer uiWG.Done()
-			displayUI(ctx, storage, cfg.UIRefreshSeconds, cfg.TUIRecentLimit)
+			displayUI(ctx, storageInst, cfg.UIRefreshSeconds, cfg.TUIRecentLimit)
 		}()
 	}
 
-	// Wait for shutdown signal
 	<-sigChan
-	fmt.Println("\nShutting down...")
+	logger.Info("\nShutting down gracefully (press Ctrl+C again to force quit)...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer shutdownCancel()
+
+	forceQuitChan := make(chan os.Signal, 1)
+	signal.Notify(forceQuitChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-forceQuitChan
+		logger.Warn("Force quit requested, terminating immediately")
+		shutdownCancel()
+	}()
+
 	cancel()
+
+	logger.Info("Waiting for in-flight bounty processing to complete...")
+	done := make(chan struct{})
+	go func() {
+		bountyWg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("All bounty processing completed")
+	case <-shutdownCtx.Done():
+		logger.Warn("Shutdown timeout exceeded, some bounties may not have been processed")
+	}
+
+	logger.Info("Stopping Web UI...")
+	if err := webUI.Stop(); err != nil {
+		logger.Error("Error stopping Web UI: %v", err)
+	}
+
 	uiWG.Wait()
+
+	logger.Info("Closing storage...")
+	if err := storageInst.Close(); err != nil {
+		logger.Error("Error closing storage: %v", err)
+	}
+
+	logger.Info("Shutdown complete")
+}
+
+func processBounty(ctx context.Context, bounty core.Bounty, storageInst *storage.SQLiteStorage, webUI *ui.WebUI, notifier *notify.DesktopNotifier, discordNotifier *notify.DiscordNotifier, discordWebhook string, cfg *config.Config, minScore int) {
+	bounty.URL = security.NormalizeURL(bounty.URL)
+	if bounty.URL == "" || !security.ValidateURL(bounty.URL) {
+		logger.Warn("Skipping bounty with invalid URL: %s", bounty.URL)
+		return
+	}
+
+	if cfg.ValidateLinksHTTP {
+		timeout := time.Duration(cfg.LinkValidationTimeout) * time.Second
+		checkCtx, cancel := context.WithTimeout(ctx, timeout)
+		ok := security.ValidateURLReachable(checkCtx, bounty.URL, timeout)
+		cancel()
+		if !ok {
+			logger.Warn("Skipping bounty with unreachable URL: %s", bounty.URL)
+			return
+		}
+	}
+
+	bounty.Title = security.SanitizeString(bounty.Title)
+	bounty.Platform = security.SanitizeString(bounty.Platform)
+	bounty.Reward = security.SanitizeString(bounty.Reward)
+	bounty.Currency = security.SanitizeString(bounty.Currency)
+	bounty.Description = security.SanitizeString(bounty.Description)
+
+	isNew, err := storageInst.IsNew(bounty.URL)
+	if err != nil {
+		logger.Error("Error checking if bounty is new: %v", err)
+		return
+	}
+
+	if !isNew {
+		return
+	}
+
+	bounty.Score = core.CalculateUrgency(&bounty)
+
+	if err := storageInst.Save(bounty); err != nil {
+		logger.Error("Error saving bounty: %v", err)
+		return
+	}
+	webUI.Broadcast(bounty)
+
+	if bounty.Score >= minScore {
+		if err := notifier.Alert(bounty); err != nil {
+			logger.Error("Error sending desktop notification: %v", err)
+		}
+		if discordWebhook != "" {
+			if err := discordNotifier.Alert(bounty); err != nil {
+				logger.Error("Error sending Discord notification: %v", err)
+			}
+		}
+	}
 }
 
 func openLogFile(path string) *os.File {
@@ -299,15 +351,14 @@ func openLogFile(path string) *os.File {
 	return file
 }
 
-// scanAll executes all scanners concurrently and waits for them to complete.
-// It ensures that all found bounties are sent to the bountyChan before returning.
-func scanAll(ctx context.Context, scanners []core.Scanner, bountyChan chan<- core.Bounty) {
+func scanAll(ctx context.Context, scannerList []core.Scanner, bountyChan chan<- core.Bounty) {
 	var wg sync.WaitGroup
-	for _, scanner := range scanners {
+	for _, scanner := range scannerList {
 		wg.Add(1)
 		go func(s core.Scanner) {
 			defer wg.Done()
-			ch, err := s.Scan(ctx)
+			scanCtx := scanners.ContextWithScannerName(ctx, s.Name())
+			ch, err := s.Scan(scanCtx)
 			if err != nil {
 				logger.Error("Error scanning %s: %v", s.Name(), err)
 				return
@@ -320,14 +371,12 @@ func scanAll(ctx context.Context, scanners []core.Scanner, bountyChan chan<- cor
 	wg.Wait()
 }
 
-func displayUI(ctx context.Context, storage *storage.SQLiteStorage, refreshSeconds int, recentLimit int) {
-	// Display header
+func displayUI(ctx context.Context, storageInst *storage.SQLiteStorage, refreshSeconds int, recentLimit int) {
 	green := color.New(color.FgGreen).SprintFunc()
 	cyan := color.New(color.FgCyan).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
 
-	// Initial clear
 	fmt.Print("\033[2J\033[H")
 
 	ticker := time.NewTicker(time.Duration(refreshSeconds) * time.Second)
@@ -340,43 +389,36 @@ func displayUI(ctx context.Context, storage *storage.SQLiteStorage, refreshSecon
 		case <-ticker.C:
 			var sb strings.Builder
 
-			// Move cursor to top-left
 			sb.WriteString("\033[H")
 
-			// Header
 			sb.WriteString(green("========================================================\n"))
 			sb.WriteString(green("   🕷️  BOUNTY OS v8: OBSIDIAN // SNIPER ACTIVE\n"))
 			sb.WriteString(green("========================================================\n"))
 			sb.WriteString("Press Ctrl+C to exit\n\n")
 
-			// Get recent bounties
-			bounties, err := storage.GetRecent(recentLimit)
+			bounties, err := storageInst.GetRecent(recentLimit)
 			if err != nil {
 				logger.Error("Error getting bounties: %v", err)
 				continue
 			}
 
-			// Sort by score
 			sort.Slice(bounties, func(i, j int) bool {
 				return bounties[i].Score > bounties[j].Score
 			})
 
-			// Print table header
 			sb.WriteString(fmt.Sprintf("%-8s | %-12s | %-10s | %-15s | %s\n", "SCORE", "PLATFORM", "PAYOUT", "PAYMENT", "TASK"))
 			sb.WriteString(strings.Repeat("-", 100) + "\n")
 
-			// Print bounties
 			for _, bounty := range bounties {
 				scoreStr := fmt.Sprintf("%d", bounty.Score)
 				if bounty.Score >= 80 {
-					scoreStr = red("⚡ " + scoreStr) // Critical
+					scoreStr = red("⚡ " + scoreStr)
 				} else if bounty.Score >= 50 {
-					scoreStr = green(scoreStr) // Good
+					scoreStr = green(scoreStr)
 				} else if bounty.Score >= 30 {
-					scoreStr = yellow(scoreStr) // Moderate
+					scoreStr = yellow(scoreStr)
 				}
 
-				// Payment styling
 				payStr := bounty.Reward
 				currencyUpper := strings.ToUpper(bounty.Currency)
 
@@ -384,11 +426,11 @@ func displayUI(ctx context.Context, storage *storage.SQLiteStorage, refreshSecon
 					strings.Contains(currencyUpper, "USDT") ||
 					strings.Contains(currencyUpper, "SOL") ||
 					strings.Contains(currencyUpper, "ETH") {
-					payStr = cyan(payStr) // Crypto
+					payStr = cyan(payStr)
 				} else if strings.Contains(currencyUpper, "CASHAPP") {
-					payStr = green(payStr) // Cash App
+					payStr = green(payStr)
 				} else if strings.Contains(currencyUpper, "PAYPAL") {
-					payStr = yellow(payStr) // PayPal
+					payStr = yellow(payStr)
 				}
 
 				platform := bounty.Platform
@@ -409,7 +451,6 @@ func displayUI(ctx context.Context, storage *storage.SQLiteStorage, refreshSecon
 			sb.WriteString("\n")
 			sb.WriteString("Last updated: " + time.Now().Format("15:04:05") + "   ")
 
-			// Output everything at once
 			fmt.Print(sb.String())
 		}
 	}

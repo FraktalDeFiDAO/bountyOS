@@ -15,10 +15,95 @@ import (
 
 	"bountyos-v8/internal/adapters/storage"
 	"bountyos-v8/internal/core"
+	"bountyos-v8/internal/resilience"
 	"bountyos-v8/internal/security"
 
 	"github.com/gorilla/websocket"
 )
+
+type WSClientState int
+
+const (
+	WSStateConnecting WSClientState = iota
+	WSStateConnected
+	WSStateDisconnecting
+	WSStateDisconnected
+)
+
+type WSClient struct {
+	conn            *websocket.Conn
+	state           WSClientState
+	lastActivity    time.Time
+	sendQueue       chan []byte
+	done            chan struct{}
+	mu              sync.RWMutex
+	pendingMessages int
+}
+
+func NewWSClient(conn *websocket.Conn) *WSClient {
+	return &WSClient{
+		conn:         conn,
+		state:        WSStateConnecting,
+		lastActivity: time.Now(),
+		sendQueue:    make(chan []byte, 100),
+		done:         make(chan struct{}),
+	}
+}
+
+func (c *WSClient) State() WSClientState {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.state
+}
+
+func (c *WSClient) SetState(state WSClientState) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.state = state
+}
+
+func (c *WSClient) LastActivity() time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.lastActivity
+}
+
+func (c *WSClient) UpdateActivity() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.lastActivity = time.Now()
+}
+
+func (c *WSClient) QueueSize() int {
+	return len(c.sendQueue)
+}
+
+func (c *WSClient) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.state == WSStateDisconnected {
+		return nil
+	}
+
+	c.state = WSStateDisconnecting
+	close(c.done)
+	close(c.sendQueue)
+	c.state = WSStateDisconnected
+	return c.conn.Close()
+}
+
+func (c *WSClient) Send(message []byte) bool {
+	select {
+	case c.sendQueue <- message:
+		c.mu.Lock()
+		c.pendingMessages++
+		c.mu.Unlock()
+		return true
+	default:
+		return false
+	}
+}
 
 type WebUI struct {
 	storage              *storage.SQLiteStorage
@@ -28,14 +113,20 @@ type WebUI struct {
 	fetchIntervalSeconds int
 	staticDir            string
 	frontendEnabled      bool
-	clientsMu            sync.Mutex
-	clients              map[*websocket.Conn]struct{}
+	clientsMu            sync.RWMutex
+	clients              map[*websocket.Conn]*WSClient
 	server               *http.Server
+	wg                   sync.WaitGroup
+
+	wsPingInterval  time.Duration
+	wsPongTimeout   time.Duration
+	wsClientTimeout time.Duration
+	wsMaxQueueSize  int
 }
 
-func NewWebUI(storage *storage.SQLiteStorage, port int, bountiesLimit int, statsLimit int, fetchIntervalSeconds int, staticDir string) *WebUI {
+func NewWebUI(storageInst *storage.SQLiteStorage, port int, bountiesLimit int, statsLimit int, fetchIntervalSeconds int, staticDir string) *WebUI {
 	if bountiesLimit <= 0 {
-		bountiesLimit = 50
+		bountiesLimit = 1000
 	}
 	if statsLimit <= 0 {
 		statsLimit = 100
@@ -45,25 +136,29 @@ func NewWebUI(storage *storage.SQLiteStorage, port int, bountiesLimit int, stats
 	}
 
 	return &WebUI{
-		storage:              storage,
+		storage:              storageInst,
 		port:                 port,
 		bountiesLimit:        bountiesLimit,
 		statsLimit:           statsLimit,
 		fetchIntervalSeconds: fetchIntervalSeconds,
 		staticDir:            staticDir,
-		clients:              make(map[*websocket.Conn]struct{}),
+		clients:              make(map[*websocket.Conn]*WSClient),
+		wsPingInterval:       30 * time.Second,
+		wsPongTimeout:        10 * time.Second,
+		wsClientTimeout:      60 * time.Second,
+		wsMaxQueueSize:       100,
 	}
 }
 
 func (ui *WebUI) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 
-	// API endpoints
 	mux.HandleFunc("/api/bounties", ui.handleBounties)
 	mux.HandleFunc("/api/stats", ui.handleStats)
 	mux.HandleFunc("/ws", ui.handleWS)
-
-	// Static files (placeholder for now)
+	mux.HandleFunc("/health", ui.handleHealth)
+	mux.HandleFunc("/health/ready", ui.handleReady)
+	mux.HandleFunc("/health/live", ui.handleLive)
 	mux.HandleFunc("/", ui.handleIndex)
 
 	ui.frontendEnabled = ui.resolveStaticDir()
@@ -72,6 +167,8 @@ func (ui *WebUI) Start(ctx context.Context) error {
 		Addr:              fmt.Sprintf(":%d", ui.port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	security.GetLogger().Info("Starting Web UI on http://localhost:%d", ui.port)
@@ -86,22 +183,32 @@ func (ui *WebUI) Start(ctx context.Context) error {
 }
 
 func (ui *WebUI) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	ui.closeAllClients()
+
 	if ui.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		return ui.server.Shutdown(ctx)
+		if err := ui.server.Shutdown(ctx); err != nil {
+			security.GetLogger().Error("Error shutting down Web UI: %v", err)
+			return err
+		}
 	}
+
+	ui.wg.Wait()
 	return nil
 }
 
 func (ui *WebUI) handleBounties(w http.ResponseWriter, r *http.Request) {
-	bounties, err := ui.storage.GetRecent(ui.bountiesLimit)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	bounties, err := ui.storage.GetRecentContext(ctx, ui.bountiesLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Sort by score
 	sort.Slice(bounties, func(i, j int) bool {
 		return bounties[i].Score > bounties[j].Score
 	})
@@ -111,7 +218,10 @@ func (ui *WebUI) handleBounties(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *WebUI) handleStats(w http.ResponseWriter, r *http.Request) {
-	bounties, err := ui.storage.GetRecent(ui.statsLimit)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	bounties, err := ui.storage.GetRecentContext(ctx, ui.statsLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -144,6 +254,74 @@ func (ui *WebUI) handleStats(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stats)
 }
 
+func (ui *WebUI) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func (ui *WebUI) handleReady(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	ready := true
+	checks := make(map[string]interface{})
+
+	if err := ui.storage.Ping(ctx); err != nil {
+		ready = false
+		checks["database"] = map[string]interface{}{
+			"status": "unhealthy",
+			"error":  err.Error(),
+		}
+	} else {
+		checks["database"] = map[string]string{"status": "healthy"}
+	}
+
+	openConns, idleConns := ui.storage.Stats()
+	checks["database_connections"] = map[string]int{
+		"open": openConns,
+		"idle": idleConns,
+	}
+
+	cbStats := resilience.AllStatsFromRegistry()
+	if len(cbStats) > 0 {
+		checks["circuit_breakers"] = cbStats
+		for name, stats := range cbStats {
+			if stats.State == resilience.StateOpen {
+				ready = false
+				security.GetLogger().Warn("Circuit breaker %s is open", name)
+			}
+		}
+	}
+
+	ui.clientsMu.RLock()
+	wsClientCount := len(ui.clients)
+	ui.clientsMu.RUnlock()
+	checks["websocket_clients"] = wsClientCount
+
+	status := http.StatusOK
+	if !ready {
+		status = http.StatusServiceUnavailable
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ready":   ready,
+		"checks":  checks,
+		"version": "v8",
+	})
+}
+
+func (ui *WebUI) handleLive(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "alive",
+		"time":   time.Now().Format(time.RFC3339),
+	})
+}
+
 func (ui *WebUI) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		if ui.frontendEnabled {
@@ -159,7 +337,6 @@ func (ui *WebUI) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple embedded HTML fallback
 	html := `
 <!DOCTYPE html>
 <html lang="en">
@@ -315,7 +492,6 @@ func (ui *WebUI) serveStatic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// SPA fallback
 	http.ServeFile(w, r, filepath.Join(ui.staticDir, "index.html"))
 }
 
@@ -333,9 +509,16 @@ func (ui *WebUI) Broadcast(bounty core.Bounty) {
 	}
 
 	clients := ui.snapshotClients()
-	for _, conn := range clients {
-		if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
-			ui.removeClient(conn)
+	for _, client := range clients {
+		if client.QueueSize() >= ui.wsMaxQueueSize {
+			security.GetLogger().Warn("Client send queue full, dropping client")
+			go ui.removeClient(client.conn)
+			continue
+		}
+
+		if !client.Send(payload) {
+			security.GetLogger().Warn("Failed to queue message for client")
+			go ui.removeClient(client.conn)
 		}
 	}
 }
@@ -353,37 +536,110 @@ func (ui *WebUI) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ui.addClient(conn)
-	defer ui.removeClient(conn)
+	client := NewWSClient(conn)
+	ui.addClient(conn, client)
+	client.SetState(WSStateConnected)
+
+	ui.wg.Add(2)
+	go ui.wsReadPump(client)
+	go ui.wsWritePump(client)
+}
+
+func (ui *WebUI) wsReadPump(client *WSClient) {
+	defer ui.wg.Done()
+	defer ui.removeClient(client.conn)
+
+	client.conn.SetReadLimit(512)
+	client.conn.SetReadDeadline(time.Now().Add(ui.wsPongTimeout + ui.wsClientTimeout))
+	client.conn.SetPongHandler(func(string) error {
+		client.UpdateActivity()
+		client.conn.SetReadDeadline(time.Now().Add(ui.wsPongTimeout + ui.wsClientTimeout))
+		return nil
+	})
 
 	for {
-		if _, _, err := conn.ReadMessage(); err != nil {
+		_, _, err := client.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				security.GetLogger().Debug("WebSocket read error: %v", err)
+			}
 			return
+		}
+		client.UpdateActivity()
+	}
+}
+
+func (ui *WebUI) wsWritePump(client *WSClient) {
+	defer ui.wg.Done()
+	defer ui.removeClient(client.conn)
+
+	ticker := time.NewTicker(ui.wsPingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-client.done:
+			client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		case msg, ok := <-client.sendQueue:
+			client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			if err := client.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				security.GetLogger().Debug("WebSocket write error: %v", err)
+				return
+			}
+
+			client.mu.Lock()
+			if client.pendingMessages > 0 {
+				client.pendingMessages--
+			}
+			client.mu.Unlock()
+
+		case <-ticker.C:
+			client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := client.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
 }
 
-func (ui *WebUI) addClient(conn *websocket.Conn) {
+func (ui *WebUI) addClient(conn *websocket.Conn, client *WSClient) {
 	ui.clientsMu.Lock()
 	defer ui.clientsMu.Unlock()
-	ui.clients[conn] = struct{}{}
+	ui.clients[conn] = client
 }
 
 func (ui *WebUI) removeClient(conn *websocket.Conn) {
 	ui.clientsMu.Lock()
 	defer ui.clientsMu.Unlock()
-	if _, ok := ui.clients[conn]; ok {
+
+	if client, ok := ui.clients[conn]; ok {
+		client.Close()
 		delete(ui.clients, conn)
 	}
-	_ = conn.Close()
 }
 
-func (ui *WebUI) snapshotClients() []*websocket.Conn {
+func (ui *WebUI) closeAllClients() {
 	ui.clientsMu.Lock()
 	defer ui.clientsMu.Unlock()
-	out := make([]*websocket.Conn, 0, len(ui.clients))
-	for conn := range ui.clients {
-		out = append(out, conn)
+
+	for conn, client := range ui.clients {
+		client.Close()
+		delete(ui.clients, conn)
+	}
+}
+
+func (ui *WebUI) snapshotClients() []*WSClient {
+	ui.clientsMu.RLock()
+	defer ui.clientsMu.RUnlock()
+	out := make([]*WSClient, 0, len(ui.clients))
+	for _, client := range ui.clients {
+		out = append(out, client)
 	}
 	return out
 }

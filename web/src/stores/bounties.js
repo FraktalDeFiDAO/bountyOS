@@ -1,15 +1,29 @@
 import { defineStore } from 'pinia'
+import { api } from '../utils/api'
+import { classifyError, ErrorTypes } from '../utils/errors'
+import { setupOfflineListeners } from '../utils/offline'
 
 const okTypes = new Set(['bounty'])
+const MAX_RETRIES = 5
+const INITIAL_BACKOFF = 1000
+const MAX_BACKOFF = 30000
 
 export const useBountiesStore = defineStore('bounties', {
   state: () => ({
     bounties: [],
     connected: false,
-    lastUpdated: null,
+    connectionQuality: 'unknown',
+    loading: 'idle',
     error: null,
-    wsBackoff: 1500,
-    ws: null
+    errorType: null,
+    lastUpdated: null,
+    retryCount: 0,
+    maxRetries: MAX_RETRIES,
+    wsBackoff: INITIAL_BACKOFF,
+    ws: null,
+    offline: !navigator.onLine,
+    wsLatency: null,
+    _cleanup: null
   }),
   getters: {
     sortedBounties: (state) =>
@@ -38,20 +52,107 @@ export const useBountiesStore = defineStore('bounties', {
         platforms: Object.keys(byPlatform).length,
         byPlatform
       }
-    }
+    },
+    isRetryable: (state) => {
+      if (!state.error) return false
+      const classified = classifyError(state.error)
+      return classified.retryable
+    },
+    isLoading: (state) => state.loading === 'initial',
+    isRefreshing: (state) => state.loading === 'refreshing',
+    isReady: (state) => state.loading === 'idle' && state.bounties.length > 0
   },
   actions: {
-    async fetchInitial() {
-      try {
-        const res = await fetch('/api/bounties')
-        if (!res.ok) throw new Error(`Failed to fetch bounties: ${res.status}`)
-        const data = await res.json()
-        this.bounties = data
-        this.lastUpdated = new Date()
-      } catch (err) {
-        this.error = err.message
+    setupOfflineDetection() {
+      if (this._cleanup) {
+        this._cleanup()
+      }
+      this._cleanup = setupOfflineListeners(this)
+    },
+
+    updateConnectionQuality(latency) {
+      this.wsLatency = latency
+      if (latency === null) {
+        this.connectionQuality = 'unknown'
+      } else if (latency < 100) {
+        this.connectionQuality = 'excellent'
+      } else if (latency < 300) {
+        this.connectionQuality = 'good'
+      } else {
+        this.connectionQuality = 'poor'
       }
     },
+
+    async fetchInitial() {
+      if (this.loading === 'initial') return
+
+      this.loading = 'initial'
+      this.error = null
+      this.errorType = null
+
+      try {
+        const startTime = performance.now()
+        const data = await api.get('/api/bounties')
+        const latency = performance.now() - startTime
+
+        this.bounties = data
+        this.lastUpdated = new Date()
+        this.loading = 'idle'
+        this.retryCount = 0
+        this.updateConnectionQuality(latency)
+      } catch (err) {
+        const classified = classifyError(err)
+        this.error = err
+        this.errorType = classified.type
+        this.loading = 'idle'
+
+        if (this.retryCount < this.maxRetries) {
+          this.retryCount++
+          const delay = this.getRetryDelay(this.retryCount)
+          setTimeout(() => this.fetchInitial(), delay)
+        }
+      }
+    },
+
+    async refresh() {
+      if (this.loading !== 'idle') return
+
+      this.loading = 'refreshing'
+      this.error = null
+      this.errorType = null
+
+      try {
+        const startTime = performance.now()
+        const data = await api.get('/api/bounties')
+        const latency = performance.now() - startTime
+
+        this.bounties = data
+        this.lastUpdated = new Date()
+        this.loading = 'idle'
+        this.retryCount = 0
+        this.updateConnectionQuality(latency)
+      } catch (err) {
+        const classified = classifyError(err)
+        this.error = err
+        this.errorType = classified.type
+        this.loading = 'idle'
+      }
+    },
+
+    retry() {
+      this.retryCount = 0
+      this.error = null
+      this.errorType = null
+      this.fetchInitial()
+    },
+
+    getRetryDelay(attempt) {
+      const baseDelay = INITIAL_BACKOFF
+      const exponentialDelay = baseDelay * Math.pow(2, attempt - 1)
+      const jitter = Math.random() * 500
+      return Math.min(exponentialDelay + jitter, MAX_BACKOFF)
+    },
+
     upsertBounty(bounty) {
       if (!bounty || !bounty.url) return
       const idx = this.bounties.findIndex((b) => b.url === bounty.url)
@@ -62,7 +163,10 @@ export const useBountiesStore = defineStore('bounties', {
       }
       this.lastUpdated = new Date()
     },
+
     connectWS() {
+      if (this.offline) return
+
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
       const wsUrl = `${protocol}://${window.location.host}/ws`
 
@@ -72,11 +176,15 @@ export const useBountiesStore = defineStore('bounties', {
 
       const ws = new WebSocket(wsUrl)
       this.ws = ws
+      const connectTime = Date.now()
 
       ws.onopen = () => {
         this.connected = true
         this.error = null
-        this.wsBackoff = 1500
+        this.errorType = null
+        this.wsBackoff = INITIAL_BACKOFF
+        const latency = Date.now() - connectTime
+        this.updateConnectionQuality(latency)
       }
 
       ws.onmessage = (event) => {
@@ -86,23 +194,52 @@ export const useBountiesStore = defineStore('bounties', {
           this.upsertBounty(payload.data)
         } catch (err) {
           this.error = 'Stream parse error'
+          this.errorType = ErrorTypes.SERVER
         }
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         this.connected = false
-        this.scheduleReconnect()
+        this.updateConnectionQuality(null)
+        if (!this.offline && event.code !== 1000) {
+          this.scheduleReconnect()
+        }
       }
 
       ws.onerror = () => {
         this.connected = false
-        this.scheduleReconnect()
+        this.updateConnectionQuality(null)
+        if (!this.offline) {
+          this.scheduleReconnect()
+        }
       }
     },
+
     scheduleReconnect() {
-      const delay = Math.min(this.wsBackoff, 10000)
-      setTimeout(() => this.connectWS(), delay)
-      this.wsBackoff = Math.min(this.wsBackoff * 1.5, 12000)
+      const delay = Math.min(this.wsBackoff, MAX_BACKOFF)
+      setTimeout(() => {
+        if (!this.offline) {
+          this.connectWS()
+        }
+      }, delay)
+      this.wsBackoff = Math.min(this.wsBackoff * 2, MAX_BACKOFF)
+    },
+
+    disconnect() {
+      if (this.ws) {
+        this.ws.close(1000)
+        this.ws = null
+      }
+      this.connected = false
+      this.updateConnectionQuality(null)
+    },
+
+    cleanup() {
+      this.disconnect()
+      if (this._cleanup) {
+        this._cleanup()
+        this._cleanup = null
+      }
     }
   }
 })
