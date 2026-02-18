@@ -67,7 +67,7 @@ func Default() Config {
 		WebPort:                 12496,
 		UIRefreshSeconds:        5,
 		TUIRecentLimit:          15,
-		APIBountiesLimit:        50,
+		APIBountiesLimit:        1000,
 		APIStatsLimit:           100,
 		WebFetchIntervalSeconds: 5,
 		EnabledScanners:         []string{"GITHUB_AGGREGATOR", "SUPERTEAM", "BOUNTYCASTER"},
