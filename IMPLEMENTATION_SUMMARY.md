@@ -327,7 +327,7 @@ func (rl *RateLimiter) WaitIfNeeded() {
 
 1. **Token Masking Test**:
    ```bash
-   DEBUG=true GITHUB_TOKEN="test_abc123_xyz" ./obsidian
+   DEBUG=true GITHUB_TOKEN="<your_token_here>" ./obsidian
    # Result: Token appears as "te*************yz" in logs
    ```
 

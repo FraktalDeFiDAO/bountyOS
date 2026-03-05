@@ -151,6 +151,7 @@ This repo includes two GitHub Actions workflows:
 
 Security gate:
 - CI and Release both enforce a mandatory `gitleaks` secret scan before build/release jobs.
+- The scan targets files changed in the current push/PR range to block new leaks without failing on historical third-party artifacts.
 
 ### Run Workflows Locally With act
 

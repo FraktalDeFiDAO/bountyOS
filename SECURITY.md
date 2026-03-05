@@ -23,7 +23,7 @@ BountyOS v8: Obsidian implements comprehensive security measures to protect sens
 
 **Example**:
 ```go
-// Original token: ghp_abc123xyz456
+// Original token: ghp_<example_token>
 // Masked in logs: gh*************yz
 ```
 

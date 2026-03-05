@@ -51,9 +51,54 @@ jobs:
           gitleaks version
 
       - name: Scan tracked files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          gitleaks dir . --redact --verbose --no-banner
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            base="$BEFORE_SHA"
+            head="$GITHUB_SHA"
+          else
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              base="$(git rev-parse HEAD~1)"
+            else
+              base="$(git rev-parse HEAD)"
+            fi
+            head="$(git rev-parse HEAD)"
+          fi
+
+          if [ -z "${base:-}" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            base="$(git rev-list --max-parents=0 HEAD | tail -n1)"
+          fi
+
+          changed_files="$(git diff --name-only --diff-filter=ACMR "$base" "$head" || true)"
+          if [ -z "$changed_files" ]; then
+            echo "No changed files to scan."
+            exit 0
+          fi
+
+          scan_root="$(mktemp -d)"
+          trap 'rm -rf "$scan_root"' EXIT
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [ -f "$file" ]; then
+              mkdir -p "$scan_root/$(dirname "$file")"
+              cp "$file" "$scan_root/$file"
+            fi
+          done <<< "$changed_files"
+
+          if ! find "$scan_root" -type f | grep -q .; then
+            echo "No existing changed files to scan."
+            exit 0
+          fi
+
+          gitleaks dir "$scan_root" --redact --verbose --no-banner
 
   build-artifacts:
     name: Build Release Artifacts
