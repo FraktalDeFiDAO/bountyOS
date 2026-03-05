@@ -19,9 +19,6 @@ permissions:
   contents: write
   packages: write
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/bountyos-obsidian
-
 jobs:
   build-artifacts:
     name: Build Release Artifacts
@@ -89,7 +86,10 @@ jobs:
           else
             tag="${{ inputs.release_tag }}"
           fi
+          image_repo="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          image_name="ghcr.io/${image_repo}/bountyos-obsidian"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -108,8 +108,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag }}
-            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ steps.vars.outputs.image_name }}:${{ steps.vars.outputs.tag }}
+            ${{ steps.vars.outputs.image_name }}:sha-${{ github.sha }}
 
   github-release:
     name: Publish GitHub Release
