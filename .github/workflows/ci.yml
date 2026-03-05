@@ -26,7 +26,21 @@ jobs:
       - name: Install gitleaks
         run: |
           set -euo pipefail
-          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin v8.24.2
+          version="v8.24.2"
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64|amd64) arch_suffix="x64" ;;
+            aarch64|arm64) arch_suffix="arm64" ;;
+            *)
+              echo "Unsupported architecture for gitleaks: $arch" >&2
+              exit 1
+              ;;
+          esac
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/${version}/gitleaks_${version#v}_linux_${arch_suffix}.tar.gz" -o "$tmpdir/gitleaks.tgz"
+          tar -xzf "$tmpdir/gitleaks.tgz" -C "$tmpdir"
+          install -m 0755 "$tmpdir/gitleaks" /usr/local/bin/gitleaks
           gitleaks version
 
       - name: Scan tracked files
