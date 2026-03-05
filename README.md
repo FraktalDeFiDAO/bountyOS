@@ -149,6 +149,9 @@ This repo includes two GitHub Actions workflows:
 - `/.github/workflows/local-cd.yml` for local Podman deploy via manual dispatch (designed for `act` + host Podman).
 - `/.github/workflows/release.yml` for tag-based releases that publish artifacts and push image tags to GHCR.
 
+Security gate:
+- CI and Release both enforce a mandatory `gitleaks` secret scan before build/release jobs.
+
 ### Run Workflows Locally With act
 
 ```bash

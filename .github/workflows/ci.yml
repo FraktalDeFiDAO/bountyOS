@@ -13,10 +13,32 @@ permissions:
   contents: read
 
 jobs:
+  secrets-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin v8.24.2
+          gitleaks version
+
+      - name: Scan tracked files
+        run: |
+          set -euo pipefail
+          gitleaks dir --source . --redact --verbose --no-banner
+
   backend:
     name: Backend Build and Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: secrets-scan
     env:
       BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP: "1"
     steps:
@@ -50,6 +72,7 @@ jobs:
     name: Frontend Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: secrets-scan
     defaults:
       run:
         working-directory: web
