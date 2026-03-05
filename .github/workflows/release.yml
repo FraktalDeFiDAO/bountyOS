@@ -53,7 +53,7 @@ jobs:
       - name: Scan tracked files
         run: |
           set -euo pipefail
-          gitleaks dir --source . --redact --verbose --no-banner
+          gitleaks dir . --redact --verbose --no-banner
 
   build-artifacts:
     name: Build Release Artifacts
