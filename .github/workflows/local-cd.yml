@@ -1,0 +1,71 @@
+name: Local CD (Podman)
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Compose stack to deploy
+        required: true
+        default: prod-ssl
+        type: choice
+        options:
+          - prod-ssl
+          - dev
+      build:
+        description: Build images before starting the stack
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy with Podman Compose
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify podman tooling
+        run: |
+          set -euo pipefail
+          command -v podman >/dev/null 2>&1 || { echo "podman is required"; exit 1; }
+          podman compose version >/dev/null 2>&1 || { echo "podman compose is required"; exit 1; }
+
+      - name: Select stack
+        id: stack
+        run: |
+          set -euo pipefail
+          case "${{ inputs.stack }}" in
+            prod-ssl)
+              echo "project=bountyos-ssl" >> "$GITHUB_OUTPUT"
+              echo "compose_file=docker-compose.prod.ssl.yml" >> "$GITHUB_OUTPUT"
+              ;;
+            dev)
+              echo "project=bountyos-dev" >> "$GITHUB_OUTPUT"
+              echo "compose_file=docker-compose.dev.yml" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported stack: ${{ inputs.stack }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Deploy stack
+        run: |
+          set -euo pipefail
+          build_flag=""
+          if [ "${{ inputs.build }}" = "true" ]; then
+            build_flag="--build"
+          fi
+
+          podman compose \
+            -p "${{ steps.stack.outputs.project }}" \
+            -f "${{ steps.stack.outputs.compose_file }}" \
+            up -d ${build_flag}
+
+      - name: Show running containers
+        run: podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'

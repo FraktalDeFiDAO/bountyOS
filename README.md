@@ -4,49 +4,188 @@ The most advanced bounty sniping platform for Web3 developers. Automatically sca
 
 ## Features
 
-- **Multi-Platform Scanning**: Monitors GitHub, Superteam, Bountycaster, and more
-- **Intelligent Scoring**: Prioritizes Crypto > Cash App > PayPal > Other payments
-- **Real-time Alerts**: Desktop notifications for high-value opportunities
-- **Persistent Storage**: SQLite database to avoid duplicate alerts
-- **Terminal UI**: Bloomberg-style dashboard for monitoring
-- **Configurable**: YAML configuration for custom settings
+- **Multi-Platform Scanning**: Monitors 20+ platforms including GitHub, Superteam, Bountycaster, Immunefi, and more
+- **Intelligent Scoring**: Obsidian algorithm prioritizes Crypto > P2P > Fiat payments with urgency detection
+- **Real-time Updates**: WebSocket-powered live bounty feed with connection quality monitoring
+- **Persistent Storage**: SQLite database with circuit breaker protection to avoid duplicate alerts
+- **Modern Web UI**: Vue 3 frontend with glass morphism design and real-time updates
+- **Issue Watcher**: Separate service for monitoring GitHub issue comments and payout notifications
+- **Resilient Architecture**: Rate limiting, retry logic, and fault tolerance built-in
 
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Scanners      │    │   Core Logic    │    │   Adapters      │
-│                 │    │                 │    │                 │
-│ • GitHub        │───▶│ • Scoring       │───▶│ • Storage       │
-│ • Superteam     │    │ • Entity        │    │ • Notifications │
-│ • Bountycaster  │    │ • Interfaces    │    │ • UI            │
-│ • Bug Bounties  │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      bountyOS v8                             │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐     ┌──────────────┐     ┌─────────────┐ │
+│  │   Scanners   │     │   Scoring    │     │   Storage   │ │
+│  │  (20+ plat.) │────▶│  (Obsidian)  │────▶│   (SQLite)  │ │
+│  └──────────────┘     └──────────────┘     └─────────────┘ │
+│                            │                                │
+│                            ▼                                │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              UI Adapter (Web + WebSocket)             │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                            │                                │
+└────────────────────────────┼────────────────────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │  Vue 3 Frontend │
+                    │  (Real-time UI) │
+                    └─────────────────┘
+```
+
+### Project Structure
+
+```
+bountyos-v8/
+├── cmd/
+│   ├── obsidian/           # Main application (TUI + Web server)
+│   └── issuewatcher/       # GitHub issue monitoring service
+├── internal/
+│   ├── core/               # Domain entities, interfaces, scoring
+│   ├── adapters/           # External integrations
+│   │   ├── scanners/       # Platform bounty scanners (20+)
+│   │   ├── storage/        # SQLite persistence
+│   │   └── ui/             # Web server + WebSocket
+│   ├── config/             # Configuration loading
+│   ├── security/           # Security utilities
+│   ├── resilience/         # Fault tolerance patterns
+│   ├── errors/             # Error types and helpers
+│   └── notify/             # Notification adapters
+├── web/                    # Vue 3 frontend
+│   └── src/
+│       ├── components/     # Reusable UI components
+│       ├── composables/    # Vue 3 composition functions
+│       ├── views/          # Page components
+│       ├── stores/         # Pinia state stores
+│       └── utils/          # Shared utilities
+├── config/                 # Runtime configuration
+├── e2e-tests/              # Playwright E2E tests
+└── scripts/                # Maintenance utilities
 ```
 
 ## Payment Priority System
 
-1. **Crypto King** (Tier 0): USDC, USDT, SOL, ETH, BTC, MATIC, AVAX
-2. **P2P Premium** (Tier 1): Cash App, Venmo
-3. **Fiat Standard** (Tier 2): PayPal, Stripe, Wise
-4. **Low Priority**: Everything else
+**Tier 0 - Crypto King:** USDC, USDT, SOL, ETH, BTC, MATIC, AVAX, ARB, OP  
+**Tier 1 - P2P Premium:** Cash App, Venmo  
+**Tier 2 - Fiat Standard:** PayPal, Stripe, Wise  
+**Tier 3 - Low Priority:** Everything else
+
+### Obsidian Scoring Algorithm
+
+| Factor | Points |
+|--------|--------|
+| Crypto payment (USDC, SOL, ETH) | +50 |
+| P2P payment (Cash App, Venmo) | +45 |
+| Fiat payment (PayPal, Stripe) | +25 |
+| Urgency keywords (URGENT, ASAP) | +30 |
+| Audit tasks | +35 |
+| Security tasks | +25 |
+| Automation tasks | +20 |
+| Dev tasks | +15 |
+| Recent (<1 hour) | +40 |
+| Platform bonuses | +10 to +30 |
 
 ## Installation
+
+### Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/FraktalDeFiDAO/bountyOS.git
 cd bountyOS
 
-# Initialize Go module
+# Install dependencies
 go mod tidy
 
 # Build the application
 go build -o obsidian ./cmd/obsidian
 
-# Run the application
+# Run with web UI (default)
 ./obsidian
+
+# Run API-only mode (no UI)
+./obsidian -no-ui
 ```
+
+### Docker Deployment
+
+```bash
+# Development with hot reload
+podman compose -f docker-compose.dev.yml up --build
+
+# Production
+podman compose up -d
+```
+
+### Podman Network Troubleshooting (aardvark/netavark)
+
+If startup fails with messages like `Error starting server failed to bind udp listener on 10.89.0.1:53`, clean stale compose network state and recreate:
+
+```bash
+podman compose -f docker-compose.dev.yml down --remove-orphans
+podman rm -f bountyos-obsidian-dev bountyos-web-dev 2>/dev/null || true
+podman network rm bountyos_bountyos-network bountyos-network 2>/dev/null || true
+podman network prune -f
+podman compose -f docker-compose.dev.yml up --build -d
+```
+
+### Frontend Development
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+## CI/CD
+
+This repo includes two GitHub Actions workflows:
+
+- `/.github/workflows/ci.yml` for backend build/tests and frontend build on push/PR/manual runs.
+- `/.github/workflows/local-cd.yml` for local Podman deploy via manual dispatch (designed for `act` + host Podman).
+- `/.github/workflows/release.yml` for tag-based releases that publish artifacts and push image tags to GHCR.
+
+### Run Workflows Locally With act
+
+```bash
+# List available workflows/jobs
+act -l
+
+# Run CI workflow locally (pull_request event, non-interactive runner image)
+act pull_request \
+  -W .github/workflows/ci.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Run local CD workflow on your host (required for Podman access)
+# This performs a real deploy.
+act workflow_dispatch \
+  -W .github/workflows/local-cd.yml \
+  -P self-hosted=-self-hosted \
+  --input stack=prod-ssl \
+  --input build=true
+
+# Dry-run release workflow locally (manual dispatch path)
+act workflow_dispatch \
+  -W .github/workflows/release.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --input release_tag=v0.0.0-local \
+  -n
+```
+
+### Publish A Real Release
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+That tag triggers `release.yml`, which:
+- builds and uploads release artifacts (`obsidian-linux-amd64.tar.gz`, `web-dist.tar.gz`, `SHA256SUMS`)
+- pushes container images to `ghcr.io/<owner>/bountyos-obsidian:<tag>` and `:sha-<commit>`
 
 ## 🔒 Security
 
@@ -145,39 +284,36 @@ npm run build
 ## Supported Platforms
 
 ### Category I: Flash Layer (Hours to 48h)
-- Algora (GitHub bounties)
-- Polar.sh (GitHub bounties)
-- Opire (GitHub bounties)
-- GitPay (GitHub bounties)
-- Superteam Earn (Solana)
-- Bountycaster (Farcaster)
-- IssueHunt (GitHub bounties)
+- **Algora** - GitHub bounties with direct API integration
+- **Polar.sh** - Open source funding platform
+- **GitPay** - GitHub bounties (via GitHub labels)
+- **IssueHunt** - GitHub bounties (via GitHub labels)
+- **Superteam Earn** - Solana ecosystem bounties
+- **Bountycaster** - Farcaster social bounties
+- **Gitcoin** - Open source bounties and grants
+- **Proxies.sx** - Web scraping services ($50-$200)
 
 ### Category II: Big Game Hunters (Bug Bounties & Audits)
-- Immunefi
-- HackenProof
-- Code4rena
-- Sherlock
-- Hats Finance
-- Bugcrowd
-- HackerOne
-- Intigriti
+- **Immunefi** - Web3 smart contract bug bounties ($1K-$10M)
+- **Code4rena** - Competitive audit contests ($10K-$200K+)
 
-### Category III: Automated Layer (DePIN & Compute)
-- Bittensor
-- Akash Network
-- Render Network
-- Golem
-- Mysterium
-- Sentinel
+### Category III: DAO & Freelance Platforms
+- **Dework** - DAO task boards and bounties
+- **CharmVerse** - DAO workspace with funded tasks
+- **LaborX** - Crypto freelance platform ($100-$10K+)
 
-### Category IV: Freelance Aggregators
-- LaborX
-- Hyve
-- CryptoTask
-- Bondex
-- WorkX
-- Freelancer
+### Category IV: Ecosystem Grants
+- **Optimism RetroPGF** - Retroactive public goods funding (10M+ OP)
+- **Solana Colosseum** - Hackathons ($100K+ prize pools)
+- **Base Ecosystem** - Coinbase-backed builder grants ($3K-$30K)
+- **Uniswap Foundation** - DeFi protocol grants ($5K-$500K)
+
+### Category V: AI Agent Platforms
+- **ugig.net** - AI agent gigs ($500-$5K+ SOL)
+- **Clawlancer** - AI + human tasks on Base (USDC)
+
+### Category VI: Web Scraping & Automation
+- **Apify** - Web scraping Actors ($100-$30K)
 
 ## Scam Filter
 
@@ -188,36 +324,94 @@ The system automatically filters out potential scams based on:
 
 ## Development
 
+### Code Quality
+
+**Formatting:**
+```bash
+# Format all Go files with goimports
+./scripts/format-go.sh
+
+# Run linters
+go vet ./...
+```
+
+**Testing:**
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with race detector
+go test -race ./...
+
+# Speed up tests (disable rate limit sleeps)
+BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP=1 go test ./...
+```
+
 ### Adding New Scanners
 
-To add a new data source, implement the `core.Scanner` interface:
+**Quick Start:** Use the BaseScanner pattern for 60% less code:
 
 ```go
-type Scanner interface {
-    Name() string
-    Scan(ctx context.Context) (<-chan core.Bounty, error)
+package scanners
+
+type MyScanner struct {
+    BaseScanner
+    // custom fields
+}
+
+func NewMyScanner(cfg MyScannerConfig) *MyScanner {
+    return &MyScanner{
+        BaseScanner: *NewBaseScanner(ScannerOptions{
+            Name:    "My Scanner",
+            BaseURL: cfg.BaseURL,
+        }),
+    }
+}
+
+func (s *MyScanner) Scan(ctx context.Context) (<-chan core.Bounty, error) {
+    ch := make(chan core.Bounty)
+    go func() {
+        defer close(ch)
+        var results []MyAPIResponse
+        s.FetchJSON(ctx, url, &results)  // Built-in error handling
+        
+        for _, item := range results {
+            bounty := s.CreateBounty(
+                item.ID, item.Title, "PLATFORM",
+                item.Reward, item.Currency, item.Description,
+                item.CreatedAt, item.ExpiresAt, item.Tags, "crypto",
+            )
+            ch <- bounty
+        }
+    }()
+    return ch, nil
 }
 ```
+
+**Documentation:** See `REFACTORING_SUMMARY.md` for complete migration guide.
 
 ### Custom Scoring
 
 The scoring algorithm in `internal/core/score.go` can be customized to prioritize different factors.
 
-### Test Speed
+### Frontend Development
 
-To speed up tests that hit mocked HTTP endpoints, you can disable rate limiter sleeps:
+**Composables:** Reusable Vue 3 composition functions:
 
-```bash
-BOUNTYOS_DISABLE_RATE_LIMIT_SLEEP=1 go test ./...
+```js
+import { useConnection, useRetry, useBountyFilters } from '@/composables'
+
+// Connection management
+const { connected, connectionQuality, qualityColor } = useConnection()
+
+// Retry logic
+const { retryCount, canRetry, getRetryDelay } = useRetry({ maxRetries: 5 })
+
+// Filtering
+const { topBounties, platformStats, search } = useBountyFilters({ bounties })
 ```
 
-### Formatting (goimports)
-
-Run Go import formatting inside the Podman dev container:
-
-```bash
-./scripts/format-go.sh
-```
+**See:** `web/src/composables/` for all available composables.
 
 ## Containers (Podman Compose)
 
