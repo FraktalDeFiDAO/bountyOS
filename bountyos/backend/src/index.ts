@@ -5,12 +5,20 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { scrapeSuperteamBounties, scrapeAlgoraBounties, scrapeCode4renaBounties, scanGitHubBountyRepos } from './services/web-scraper.js';
+import { adapterRegistry } from './adapters/registry';
+import { proxiesSxAdapter } from './adapters/platforms/proxies-sx.adapter';
+import { githubAdapter } from './adapters/platforms/github.adapter';
 
 const fastify = Fastify({ logger: false });
 
 // Register CORS
 fastify.register(cors, { origin: true });
+
+// Initialize adapters
+adapterRegistry.registerAdapter(proxiesSxAdapter);
+adapterRegistry.registerAdapter(githubAdapter);
+
+console.log('✅ Registered platform adapters:', adapterRegistry.getStats());
 
 // ============================================
 // REAL PLATFORM INTEGRATIONS
@@ -219,70 +227,71 @@ fastify.get('/api', async () => {
   };
 });
 
-// Get all bounties from all platforms
+// Get all bounties from all platforms using adapters
 fastify.get('/api/bounties', async (request: any, reply: any) => {
-  const { type, platform, status, limit = 100 } = request.query as any;
-  
-  console.log(`Fetching bounties with filters: type=${type}, platform=${platform}`);
-  
-  // Fetch from all platforms in parallel
-  const [gitcoin, superteam, algora, proxies, code4rena, github] = await Promise.all([
-    fetchGitcoinBounties(),
-    fetchSuperteamBounties(),
-    fetchAlgoraBounties(),
-    fetchProxiesSXBounties(),
-    fetchCode4renaBounties(),
-    fetchGitHubBountyRepos()
-  ]);
-  
-  // Combine all bounties
-  let allBounties = [...gitcoin, ...superteam, ...algora, ...proxies, ...code4rena, ...github];
-  
-  // Remove duplicates by URL
-  const seen = new Set();
-  allBounties = allBounties.filter((b: any) => {
-    if (seen.has(b.url)) return false;
-    seen.add(b.url);
-    return true;
-  });
-  
-  // Apply filters
-  if (type) {
-    allBounties = allBounties.filter((b: any) => b.type === type);
-  }
-  
-  if (platform) {
-    allBounties = allBounties.filter((b: any) => b.platform.id === platform);
-  }
-  
-  // Sort by reward (highest first)
-  allBounties.sort((a: any, b: any) => (b.rewardAmount || 0) - (a.rewardAmount || 0));
-  
-  // Apply limit
-  allBounties = allBounties.slice(0, Number(limit));
-  
-  return {
-    data: allBounties,
-    meta: {
-      total: allBounties.length,
-      page: 1,
+  const { type, platform, status, limit = 100, page = 1 } = request.query as any;
+
+  console.log(`Fetching bounties with filters: type=${type}, platform=${platform}, limit=${limit}`);
+
+  try {
+    // Use adapter registry to fetch from all platforms
+    const allBounties = await adapterRegistry.fetchAllBounties({
       limit: Number(limit),
-      totalPages: 1,
-      platforms: {
-        gitcoin: gitcoin.length,
-        superteam: superteam.length,
-        algora: algora.length,
-        'proxies-sx': proxies.length,
-        code4rena: code4rena.length,
-        github: github.length
-      }
-    },
-    filters: {
-      types: ['DEV', 'GRANT', 'MICRO', 'GIG', 'HACK', 'AMB', 'RETRO', 'SEC'],
-      platforms: ['gitcoin', 'superteam', 'algora', 'proxies-sx', 'code4rena', 'github'],
-      status: ['open', 'in_progress', 'completed', 'closed']
+      type: type ? [type] : undefined,
+      platform: platform ? [platform] : undefined,
+      status: status ? [status] : undefined,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    });
+
+    // Apply additional filters
+    let filteredBounties = allBounties;
+
+    if (platform) {
+      filteredBounties = filteredBounties.filter((b: any) => b.platform.id === platform);
     }
-  };
+
+    if (status) {
+      filteredBounties = filteredBounties.filter((b: any) => b.status === status);
+    }
+
+    // Sort by reward (highest first)
+    filteredBounties.sort((a: any, b: any) => (b.rewardAmount || 0) - (a.rewardAmount || 0));
+
+    // Pagination
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const paginatedBounties = filteredBounties.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+    // Count by platform
+    const platformCounts: Record<string, number> = {};
+    allBounties.forEach((b: any) => {
+      const platformId = b.platform.id;
+      platformCounts[platformId] = (platformCounts[platformId] || 0) + 1;
+    });
+
+    return {
+      data: paginatedBounties,
+      meta: {
+        total: filteredBounties.length,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(filteredBounties.length / limitNum),
+        platforms: platformCounts
+      },
+      filters: {
+        types: ['DEV', 'GRANT', 'MICRO', 'GIG', 'HACK', 'AMB', 'RETRO', 'SEC', 'DESIGN', 'CONTENT', 'AUDIT'],
+        platforms: Object.keys(platformCounts),
+        status: ['open', 'in_progress', 'completed', 'closed']
+      }
+    };
+  } catch (error: any) {
+    console.error('Error fetching bounties:', error);
+    return reply.status(500).send({
+      message: 'Error fetching bounties',
+      error: error.message
+    });
+  }
 });
 
 // Featured bounties (top paying)
@@ -326,34 +335,32 @@ fastify.get('/api/bounties/platforms', async () => {
   ];
 });
 
-// Get single bounty by ID
+// Get single bounty by ID using adapters
 fastify.get<{ Params: { id: string } }>('/api/bounties/:id', async (request, reply) => {
   const { id } = request.params;
   
   console.log(`Fetching single bounty: ${id}`);
   
-  // Fetch all bounties and find the matching one
-  const [gitcoin, superteam, algora, proxies, code4rena, github] = await Promise.all([
-    fetchGitcoinBounties(),
-    fetchSuperteamBounties(),
-    fetchAlgoraBounties(),
-    fetchProxiesSXBounties(),
-    fetchCode4renaBounties(),
-    fetchGitHubBountyRepos()
-  ]);
-
-  const allBounties = [...gitcoin, ...superteam, ...algora, ...proxies, ...code4rena, ...github];
-  const bounty = allBounties.find(b => b.id === id);
-  
-  if (!bounty) {
-    return reply.status(404).send({
-      message: `Bounty not found: ${id}`,
-      error: 'Not Found',
-      statusCode: 404
+  try {
+    // Use adapter registry to fetch bounty by ID
+    const bounty = await adapterRegistry.fetchBountyById(id);
+    
+    if (!bounty) {
+      return reply.status(404).send({
+        message: `Bounty not found: ${id}`,
+        error: 'Not Found',
+        statusCode: 404
+      });
+    }
+    
+    return { data: bounty };
+  } catch (error: any) {
+    console.error('Error fetching bounty:', error);
+    return reply.status(500).send({
+      message: 'Error fetching bounty',
+      error: error.message
     });
   }
-  
-  return { data: bounty };
 });
 
 // Start server
