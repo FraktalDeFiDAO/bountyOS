@@ -1,7 +1,8 @@
 # bountyOS - Podman Containers Status
 
 **Date:** March 13, 2026  
-**Status:** ✅ Running
+**Status:** ✅ Running  
+**Security:** 🔒 Non-standard random ports
 
 ---
 
@@ -10,15 +11,17 @@
 ### Web UI - Frontend
 - **Container Name:** `bountyos-frontend`
 - **Status:** ✅ Running
-- **Port:** 3000
-- **Access:** http://localhost:3000
+- **Internal Port:** 3000
+- **External Port:** 28473 (random non-standard)
+- **Access:** http://localhost:28473
 - **Health Check:** ✅ 200 OK
 
 ### Backend API
 - **Container Name:** `bountyos-backend`
 - **Status:** ✅ Running
-- **Port:** 8000
-- **Access:** http://localhost:8000
+- **Internal Port:** 8000
+- **External Port:** 39182 (random non-standard)
+- **Access:** http://localhost:39182
 - **Health Check:** ⚠️ 404 (Expected - API routes required)
 
 ---
@@ -101,11 +104,13 @@ podman ps --filter "name=bountyos"
 
 ## 🔗 Access Points
 
-| Service | URL | Status |
-|---------|-----|--------|
-| Frontend | http://localhost:3000 | ✅ Running |
-| Backend API | http://localhost:8000 | ✅ Running |
-| Obsidian (when fixed) | http://localhost:12496 | ⚠️ Config issue |
+| Service | URL | Port | Status |
+|---------|-----|------|--------|
+| Frontend | http://localhost:28473 | 28473 | ✅ Running |
+| Backend API | http://localhost:39182 | 39182 | ✅ Running |
+| Obsidian (when fixed) | http://localhost:12496 | 12496 | ⚠️ Config issue |
+
+**Note:** Using random non-standard ports for security and to avoid conflicts.
 
 ---
 
