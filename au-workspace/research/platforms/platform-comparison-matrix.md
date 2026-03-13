@@ -1,5 +1,6 @@
 ---
 created: 2026-03-12
+updated: 2026-03-13
 tags: [platforms, comparison, matrix, web3-earning]
 aliases: [Platform Comparison Matrix, Web3 Platform Matrix]
 source: ChatGPT Conversation Export
@@ -8,8 +9,10 @@ source: ChatGPT Conversation Export
 # Platform Comparison Matrix
 
 **Analysis Date:** March 12, 2026  
-**Platforms Analyzed:** 80+  
-**Source:** Full conversation export from ChatGPT
+**Platforms Analyzed:** 83 (25 detailed + 58 additional)  
+**Source:** Full ChatGPT conversation export
+
+> **Note:** This document contains the 25 most important platforms. For the complete list of 83 platforms, see [[COMPLETE_PLATFORM_LIST_80+]].
 
 ---
 
