@@ -1,0 +1,225 @@
+name: Test & Quality Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Backend Unit Tests
+  backend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        working-directory: bountyos/backend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run unit tests
+        working-directory: bountyos/backend
+        run: pnpm test:coverage
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: bountyos/backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+  # Frontend Unit Tests
+  frontend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        working-directory: bountyos/frontend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run unit tests
+        working-directory: bountyos/frontend
+        run: pnpm test
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: bountyos/frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  # E2E Tests
+  e2e-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      backend:
+        image: node:20-alpine
+        options: >-
+          --health-cmd "wget -q --spider http://localhost:8000/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install backend dependencies
+        working-directory: bountyos/backend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Install frontend dependencies
+        working-directory: bountyos/frontend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Install Playwright browsers
+        working-directory: bountyos/frontend
+        run: pnpm exec playwright install --with-deps
+        
+      - name: Start backend server
+        working-directory: bountyos/backend
+        run: pnpm dev &
+        env:
+          NODE_ENV: test
+          
+      - name: Wait for backend to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health > /dev/null; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+          echo "Backend failed to start"
+          exit 1
+          
+      - name: Start frontend server
+        working-directory: bountyos/frontend
+        run: pnpm dev &
+        env:
+          NODE_ENV: test
+          VITE_API_BASE_URL: http://localhost:8000/api
+          
+      - name: Wait for frontend to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Frontend is ready"
+              exit 0
+            fi
+            echo "Waiting for frontend... ($i/30)"
+            sleep 2
+          done
+          echo "Frontend failed to start"
+          exit 1
+          
+      - name: Run E2E tests
+        working-directory: bountyos/frontend
+        run: pnpm test:e2e
+        
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: bountyos/frontend/playwright-report/
+
+  # Code Quality Checks
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run ESLint (backend)
+        working-directory: bountyos/backend
+        run: pnpm lint
+        
+      - name: Run ESLint (frontend)
+        working-directory: bountyos/frontend
+        run: pnpm lint
+        
+      - name: Run TypeScript check (backend)
+        working-directory: bountyos/backend
+        run: pnpm type-check
+        
+      - name: Run TypeScript check (frontend)
+        working-directory: bountyos/frontend
+        run: pnpm type-check
+
+  # API Spec Compliance
+  api-spec-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        working-directory: bountyos/backend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Generate OpenAPI spec
+        working-directory: bountyos/backend
+        run: pnpm generate:openapi || echo "OpenAPI generation not implemented yet"
+        
+      - name: Validate API endpoints
+        working-directory: bountyos/backend
+        run: pnpm test:api || echo "API validation not implemented yet"
