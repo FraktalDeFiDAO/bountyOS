@@ -1,0 +1,16 @@
+{
+  "name": "conflux-cas-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Conflux Automation Site",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "coverage": "hardhat coverage"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^4.9.5",
+    "hardhat": "^2.19.0"
+  }
+}
